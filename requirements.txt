@@ -91,7 +91,7 @@ openpyxl==2.5.12
 packaging==23.1
 pandas==2.0.2
 pexpect==4.9.0
-Pillow==9.5.0
+Pillow==10.3.0
 pkginfo==1.11.1
 platformdirs==4.3.6
 plotly==5.24.1
