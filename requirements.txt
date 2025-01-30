@@ -67,7 +67,7 @@ iniconfig==2.0.0
 installer==0.7.0
 jaraco.classes==3.4.0
 jdcal==1.4.1
-Jinja2==3.1.4
+Jinja2==3.1.5
 jiter==0.5.0
 joblib==1.2.0
 keyring==24.3.1
