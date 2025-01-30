@@ -1,0 +1,34 @@
+# Default configuration for HTML processor
+input_directory: 'io/SI'
+output_directory: 'io'
+create_docx: false
+log_level: 'INFO'
+log_file: 'html_processor.log'
+
+# HTML cleaning settings
+standard_html_classes:
+  table: ['sortable']
+  td: ['selected', 'header']
+  tr: ['odd', 'even']
+  div: ['container', 'row', 'column']
+  span: ['bold', 'italic', 'underline']
+  ul: ['list', 'navigation']
+  li: ['active', 'current']
+  img: ['thumbnail', 'responsive']
+  a: ['active', 'visited', 'external']
+
+image_settings:
+  border_color: '#00c65e'
+  border_width: '1px'
+  allowed_attrs: ['src', 'alt', 'width', 'height', 'title', 'style']
+
+http_settings:
+  timeout: 30
+  max_retries: 3
+  user_agent: 'HTML Processor Bot/1.0'
+
+# Add this to your existing config
+document_tree:
+  format: 'table'  # or 'tree' for the original format
+  separator: ';'  # separator between columns
+  show_filenames: false  # Set to false to hide filenames
