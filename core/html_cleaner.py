@@ -9,7 +9,8 @@ from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup, Comment
 from utils.utilities import get_config
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
+
 import argparse
 
 parser = argparse.ArgumentParser(description="Processador de HTML")
@@ -417,6 +418,8 @@ class HTMLCleaner:
                 # Clean the src attribute
                 if 'src' in img.attrs and img['src']:
                     src = img['src']
+                    # Remove qualquer query string do src
+                    src = urlparse(src).path
                     # If necessary, adjust the src to remove Confluence-specific parts
                     # For now, we'll keep the src as it is
                     if not src.startswith(('http://', 'https://', 'file://', '/')):
@@ -437,7 +440,7 @@ class HTMLCleaner:
 
             except Exception as e:
                 self.logger.error(f"Error processing image: {e}", exc_info=True)
-        # Debug HTML
+        #Debug HTML
         #print(self.soup.prettify())
 
     def _process_links(self) -> None:
