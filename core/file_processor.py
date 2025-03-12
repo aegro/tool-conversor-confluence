@@ -1,9 +1,28 @@
-# file_processor.py
+#!/usr/bin/env python3
+"""
+File Processor Module for Confluence Export Processing
+
+This module provides functionality to process HTML files exported from Confluence.
+The main component is the FileProcessor class, which handles:
+
+1. Organizing files according to their breadcrumb hierarchy
+2. Processing HTML files to clean Confluence-specific elements
+3. Optionally converting HTML files to DOCX format
+4. Handling embedded resources (images, attachments, etc.)
+5. Managing file paths and duplicates
+
+The module handles the file system operations required for processing Confluence
+exports, including directory creation, file copying, and path management.
+
+Usage:
+    processor = FileProcessor(input_dir, output_dir, create_docx=True)
+    results = processor.process_files()
+"""
 
 import logging
 import shutil
 from pathlib import Path
-from typing import Union, Tuple, List, Optional, Dict, Any
+from typing import Union, Tuple, List, Optional, Dict, Any, Set
 import re
 
 import requests
@@ -17,8 +36,24 @@ class FileProcessor:
     """
     Process HTML files exported from Confluence by organizing them according to breadcrumbs 
     and optionally converting them to DOCX format.
+    
+    This class handles the overall file processing workflow:
+    - Scanning input directory for files
+    - Setting up output directory structure
+    - Processing each HTML file (cleaning and conversion)
+    - Managing resource directories (images, attachments)
+    - Tracking statistics and errors
+    
+    Attributes:
+        input_dir (Path): Input directory containing HTML files
+        output_dir (Path): Output directory for processed files
+        create_docx (bool): Whether to create DOCX versions
+        config (Dict): Configuration settings
+        logger (logging.Logger): Logger instance
+        stats (Dict): Statistics about processed files
     """
 
+    # Define constants for resource folder names and supported extensions
     RESOURCE_FOLDERS = ["attachments", "images", "styles", "img"]
     SUPPORTED_EXTENSIONS = [".html", ".docx"]
 
@@ -56,7 +91,7 @@ class FileProcessor:
         # Validate directories
         self._validate_directories()
         
-        # Initialize statistics
+        # Initialize statistics tracking dict
         self.stats = {
             'total_input_files': 0,
             'processed_files': 0,
@@ -64,10 +99,16 @@ class FileProcessor:
             'created_docx': 0,
             'errors': []
         }
+        
+        # For dry run mode (initialized to False)
+        self.dry_run = False
 
     def _count_input_files(self) -> int:
         """
         Count total number of HTML files in input directory.
+        
+        Recursively scans the input directory to find all HTML files and
+        updates the stats dictionary with the count.
 
         Returns:
             int: Total number of HTML files found
@@ -79,6 +120,9 @@ class FileProcessor:
     def _validate_directories(self) -> None:
         """
         Validate input and output directory paths.
+        
+        Checks that the input directory exists and is a directory.
+        Creates the output directory if it doesn't exist.
         
         Raises:
             FileNotFoundError: If input directory doesn't exist

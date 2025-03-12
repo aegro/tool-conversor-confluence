@@ -1,4 +1,25 @@
-# test_main.py
+#!/usr/bin/env python3
+"""
+Test Suite for Confluence HTML Export Processor
+
+This module contains comprehensive unit tests for the Confluence HTML Export Processor
+application. The tests cover:
+
+1. HTML cleaning functionality (removing Confluence-specific elements)
+2. Breadcrumb extraction and processing
+3. File and directory operations
+4. Table and image processing
+5. Various utility functions
+
+Each test class focuses on a specific aspect of the application, and test methods
+are named to clearly indicate what functionality they're testing.
+
+To run these tests:
+    python -m unittest test_main.py
+    
+Or with pytest:
+    pytest test_main.py
+"""
 
 import unittest
 from pathlib import Path
@@ -22,7 +43,23 @@ from main import (clean_confluence_html, extract_breadcrumbs, create_directory_p
                  remove_footer_section, remove_breadcrumb_section, organize_duplicate_named_files)
 
 class TestConfluenceHtmlCleaner(unittest.TestCase):
+    """
+    Test suite for HTML cleaning functions in the Confluence HTML Export Processor.
+    
+    This test class covers all aspects of HTML cleaning, including:
+    - Removing Confluence-specific elements and attributes
+    - Cleaning up HTML structure
+    - Processing images and tables
+    - Handling breadcrumbs and navigation elements
+    """
+    
     def setUp(self):
+        """
+        Set up test fixtures before each test method.
+        
+        This method creates a sample HTML document with various Confluence-specific
+        elements that will be used by individual test methods.
+        """
         self.sample_html = """
         <html>
             <head>

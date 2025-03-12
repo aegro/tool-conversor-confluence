@@ -1,11 +1,33 @@
-# main.py
+#!/usr/bin/env python3
+"""
+Tool Conversor Confluence - Main Application Entry Point
+
+This module serves as the main entry point for the Confluence HTML Export Processor tool.
+It provides a command-line interface for cleaning and processing HTML files exported from 
+Confluence, optionally converting them to DOCX format, and organizing them based on 
+breadcrumb hierarchy.
+
+The application follows this workflow:
+1. Parse command-line arguments
+2. Load and validate configuration
+3. Initialize logging
+4. Process HTML files (clean, organize, and optionally convert to DOCX)
+5. Generate document tree (optional)
+6. Output processing summary
+
+Example usage:
+    python main.py --input-dir /path/to/confluence_exports --output-dir /path/to/output --create-docx
+
+For more information, see the README.md file or run:
+    python main.py --help
+"""
 
 import os
 import sys
 import argparse
 import logging
 import time
-from typing import Dict, Any
+from typing import Dict, List, Any, Optional
 from pathlib import Path
 import traceback
 
@@ -22,14 +44,35 @@ from utils.utilities import (
 from core.file_processor import FileProcessor
 
 class ConfigurationError(Exception):
-    """Custom exception for configuration-related errors."""
+    """
+    Custom exception for configuration-related errors.
+    
+    This exception is raised when there are issues with the application configuration,
+    such as missing required values, invalid paths, or conflicting settings.
+    """
     pass
 
 class HTMLProcessorCLI:
-    """Command Line Interface for HTML Processor application."""
+    """
+    Command Line Interface for HTML Processor application.
+    
+    This class handles the command-line interface for the HTML Processor application,
+    including argument parsing, configuration loading, and orchestrating the processing
+    workflow.
+    
+    Attributes:
+        logger (logging.Logger): Logger instance for this class
+        start_time (float): Time when processing started (used for performance tracking)
+        stats (Dict[str, Any]): Statistics collected during processing
+    """
     
     def __init__(self):
-        """Initialize the CLI application."""
+        """
+        Initialize the CLI application.
+        
+        Sets up the logger, starts the performance timer, and initializes statistics
+        collection.
+        """
         self.logger = logging.getLogger(__name__)
         self.start_time = time.time()
         self.stats: Dict[str, Any] = {
@@ -42,6 +85,9 @@ class HTMLProcessorCLI:
     def parse_arguments(self) -> argparse.Namespace:
         """
         Parse command line arguments.
+
+        Defines and processes all command-line arguments for the application, providing
+        sensible defaults and help messages.
 
         Returns:
             argparse.Namespace: Parsed command line arguments
@@ -106,20 +152,25 @@ class HTMLProcessorCLI:
         """
         Initialize application with configuration and logging.
 
+        Loads the configuration from the specified file or the default location,
+        overrides values based on command-line arguments, sets up logging,
+        and validates the resulting configuration.
+
         Args:
             args: Parsed command line arguments
 
         Returns:
-            Dict[str, Any]: Application configuration
+            Dict[str, Any]: Final application configuration after merging defaults,
+                            config file values, and command-line arguments
 
         Raises:
-            ConfigurationError: If configuration is invalid
+            ConfigurationError: If configuration is invalid or cannot be loaded
         """
         try:
-            # Load configuration
+            # Load configuration from file
             config = load_config(args.config)
 
-            # Override config with command line arguments
+            # Override config with command line arguments if provided
             if args.input_dir:
                 config['input_directory'] = args.input_dir
             if args.output_dir:
@@ -129,10 +180,10 @@ class HTMLProcessorCLI:
             if args.log_level:
                 config['log_level'] = args.log_level
 
-            # Setup logging
+            # Setup logging with the configured options
             setup_logging(config, args.log_file)
 
-            # Validate required configuration
+            # Validate required configuration values and paths
             self._validate_config(config)
 
             return config

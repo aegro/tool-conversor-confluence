@@ -1,4 +1,24 @@
-# utilities.py
+#!/usr/bin/env python3
+"""
+Utility Module for Confluence HTML Export Processor
+
+This module provides common utility functions and classes used throughout the
+Confluence HTML Export Processor application. It includes:
+
+1. Configuration management (loading, validation, defaults)
+2. Logging setup and configuration
+3. File and path handling utilities
+4. HTTP request utilities
+5. Text processing and sanitization functions
+
+The utilities are designed to be reusable across different modules and provide
+consistent behavior for common operations.
+
+Usage examples:
+    config = load_config('config.yaml')
+    setup_logging(config)
+    sanitized = sanitize_filename('My Confluence Page?')
+"""
 
 import logging
 import sys
@@ -6,18 +26,30 @@ import re
 import yaml
 import requests
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, List, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
 
-# Type aliases
+# Type aliases for improved code readability
 PathLike = Union[str, Path]
 ConfigDict = Dict[str, Any]
 
 @dataclass
 class HttpConfig:
-    """HTTP configuration settings."""
+    """
+    HTTP configuration settings.
+    
+    This dataclass encapsulates HTTP-related configuration settings used
+    for downloading resources or making API requests.
+    
+    Attributes:
+        timeout (int): HTTP request timeout in seconds
+        max_retries (int): Maximum number of retry attempts for failed requests
+        user_agent (str): User agent string for HTTP requests
+        verify_ssl (bool): Whether to verify SSL certificates
+        allow_redirects (bool): Whether to follow HTTP redirects
+    """
     timeout: int = 30
     max_retries: int = 3
     user_agent: str = 'HTML Processor/1.0'
@@ -25,18 +57,32 @@ class HttpConfig:
     allow_redirects: bool = True
 
 class ConfigurationError(Exception):
-    """Custom exception for configuration-related errors."""
+    """
+    Custom exception for configuration-related errors.
+    
+    This exception is raised when there are issues with loading, validating,
+    or accessing configuration values.
+    """
     pass
 
 class ConfigurationManager:
     """
     Manages application configuration with support for default values,
     environment variables, and user overrides.
+    
+    This singleton class handles loading configuration from various sources,
+    applying defaults, and providing validated configuration values to
+    the application components.
+    
+    Attributes:
+        _instance: Singleton instance
+        _config (Optional[ConfigDict]): Loaded configuration dictionary
     """
     
     _instance = None
     _config: Optional[ConfigDict] = None
     
+    # Default configuration values used when not specified in config file
     DEFAULT_CONFIG = {
         'input_directory': 'input',
         'output_directory': 'output',

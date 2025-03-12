@@ -1,15 +1,34 @@
-# html_cleaner.py
+#!/usr/bin/env python3
+"""
+HTML Cleaner Module for Confluence Export Processing
+
+This module provides functionality to clean and standardize HTML content exported from Confluence.
+The main component is the HTMLCleaner class, which handles:
+
+1. Removal of Confluence-specific classes, IDs, and scripts
+2. Standardization of HTML structure and formatting
+3. Processing of embedded resources (images, attachments)
+4. Fixing relative links and paths
+5. Injecting custom CSS styles for better rendering
+6. Preparing HTML for potential DOCX conversion
+
+The module applies best practices for HTML cleaning and normalization while preserving
+the content and structure of the original document.
+
+Usage:
+    cleaner = HTMLCleaner(html_content, target_directory)
+    cleaned_html = cleaner.clean()
+"""
 
 import os
 import re
 import logging
 from pathlib import Path
-from typing import Dict, Optional, Set
-from urllib.parse import urlparse
+from typing import Dict, Optional, Set, List, Union, Tuple
+from urllib.parse import urlparse, urljoin
 
-from bs4 import BeautifulSoup, Comment
+from bs4 import BeautifulSoup, Comment, Tag
 from utils.utilities import get_config
-from urllib.parse import urljoin
 import argparse
 
 parser = argparse.ArgumentParser(description="Processador de HTML")
@@ -18,13 +37,25 @@ parser.add_argument('--output-dir', required=True, help="Diretório de saída")
 parser.add_argument('--create-docx', action='store_true', help="Se deseja criar um DOCX")
 args = parser.parse_args()
 
-
-
 class HTMLCleaner:
     """
     Clean and standardize HTML content exported from Confluence.
-    Handles removal of unnecessary elements, standardization of classes,
-    and processing of embedded resources like images.
+    
+    This class handles comprehensive cleaning of Confluence HTML exports, including:
+    - Removing unnecessary elements and attributes
+    - Standardizing classes and structure
+    - Processing embedded resources like images
+    - Fixing links and references
+    - Applying custom styling
+    
+    Attributes:
+        soup (BeautifulSoup): The parsed HTML document
+        target_dir (Path): Directory for saving processed resources
+        config (Dict): Configuration settings
+        logger (logging.Logger): Logger instance
+        title (str): Extracted document title
+        confluence_classes (Set[str]): Confluence-specific classes to remove
+        confluence_ids (Set[str]): Confluence-specific IDs to remove
     """
 
     def __init__(self, html_content: str, target_dir: Path, config: Optional[Dict] = None):
@@ -36,6 +67,7 @@ class HTMLCleaner:
             target_dir (Path): Directory for saving processed resources
             config (Optional[Dict]): Configuration override. Defaults to None
         """
+        # Parse HTML with lxml parser for better handling
         self.soup = BeautifulSoup(html_content, 'lxml')
         self.target_dir = Path(target_dir)
         self.config = config or get_config()
@@ -48,6 +80,7 @@ class HTMLCleaner:
         self.title = self._extract_title()
 
         # Define Confluence-specific classes and IDs to remove
+        # These are known Confluence classes that are not needed in the output
         self.confluence_classes = set([
             # Classes to remove
             'theme-default', 'aui-theme-default', 'first', 'pagetitle', 'wiki-content', 'group',
@@ -76,12 +109,20 @@ class HTMLCleaner:
         ])
 
     def _inject_custom_styles(self) -> None:
-        """Inject custom CSS styles into the HTML document."""
+        """
+        Inject custom CSS styles into the HTML document.
+        
+        This method removes any existing style tags from the body (which might contain
+        Confluence-specific styling) and adds our own custom CSS for better 
+        presentation in browsers and DOCX output.
+        """
         # First, remove any existing style tags from the body
         for style_tag in self.soup.find_all('style'):
             if style_tag.parent.name != 'head':
                 style_tag.decompose()
 
+        # Custom CSS styles that will be injected into the document head
+        # These styles improve readability and presentation
         custom_css = """
             body {
                 font-family: 'DM Sans', sans-serif;

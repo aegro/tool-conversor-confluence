@@ -1,16 +1,38 @@
 #!/usr/bin/env python3
 """
-Document Tree Generator for Confluence HTML exports.
+Document Tree Generator for Confluence HTML Exports
+
+This module provides functionality to generate a hierarchical tree representation
+of Confluence HTML exports. The document tree can be exported in various formats:
+- Markdown table format
+- CSV format
+- Plain text indented format
+
+The module extracts breadcrumbs from HTML files to determine the hierarchical 
+structure of the documents, and can generate different visual representations
+of this structure.
+
+Key features:
+- Extracts breadcrumbs from HTML files
+- Builds a hierarchical tree structure
+- Supports multiple output formats
+- Can include/exclude filenames from output
+- Handles sorting and indentation of the tree
+
+Usage:
+    tree_builder = DocumentTreeBuilder(input_dir, output_dir)
+    tree_builder.build_tree()
+    tree_builder.export_tree(format='table', separator=';')
 """
 
 import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Any
 from dataclasses import dataclass
 from bs4 import BeautifulSoup
-import csv  # Add this import at the top
+import csv  # For CSV export functionality
 
 # Add parent directory to Python path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -21,7 +43,17 @@ from utils.utilities import load_config, setup_logging
 
 @dataclass
 class TreeNode:
-    """Represents a node in the document tree."""
+    """
+    Represents a node in the document tree.
+    
+    This class is used to build the hierarchical document tree, where each node
+    can have children nodes, representing the breadcrumb hierarchy from Confluence.
+    
+    Attributes:
+        name (str): The name of the node (document title or breadcrumb segment)
+        path (Optional[Path]): Path to the document file (None for intermediate nodes)
+        children (Dict[str, 'TreeNode']): Dictionary of child nodes, keyed by name
+    """
     name: str
     path: Optional[Path] = None
     children: Dict[str, 'TreeNode'] = None
@@ -32,7 +64,20 @@ class TreeNode:
             self.children = {}
 
 class DocumentTreeBuilder:
-    """Builds and exports a hierarchical tree structure from HTML documents."""
+    """
+    Builds and exports a hierarchical tree structure from HTML documents.
+    
+    This class scans HTML files, extracts breadcrumbs to determine their
+    hierarchical structure, builds a tree representation, and exports
+    it in various formats.
+    
+    Attributes:
+        input_dir (Path): Directory containing processed HTML files
+        output_dir (Path): Directory for saving the document tree output
+        config (dict): Configuration settings
+        logger (logging.Logger): Logger instance
+        root (TreeNode): Root node of the document tree
+    """
     
     def __init__(
         self,
@@ -40,7 +85,14 @@ class DocumentTreeBuilder:
         output_dir: Union[str, Path],
         config: Optional[dict] = None
     ):
-        """Initialize the DocumentTreeBuilder."""
+        """
+        Initialize the DocumentTreeBuilder.
+        
+        Args:
+            input_dir (Union[str, Path]): Path to directory with HTML files
+            output_dir (Union[str, Path]): Path to save the document tree output
+            config (Optional[dict]): Configuration override. Defaults to None
+        """
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
         self.config = config or load_config()
