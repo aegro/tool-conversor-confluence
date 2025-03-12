@@ -453,15 +453,74 @@ class HTMLCleaner:
                     # For now, we'll keep the src as it is
                     if not src.startswith(('http://', 'https://', 'file://', '/')):
                         if getattr(self.soup, 'base_url', None):
-                            # Usa urljoin se o base_url estiver presente
+                            # Use urljoin if base_url is present
                             img['src'] = urljoin(getattr(self.soup, 'base_url', ''), src)
                             self.logger.info(f"Updated src to absolute path: {img['src']}")
                         else:
-                            # Caso base_url não esteja disponível, use o diretório atual
-                            base_dir = os.getcwd()
-                            absolute_path = os.path.join(base_dir, src)
-                            img['src'] = f"{absolute_path}"
-                            self.logger.info(f"Updated src to absolute path: {img['src']}")
+                            # Find the main output directory 
+                            if self.target_dir:
+                                try:
+                                    # Analyze the path structure to find the correct main directory
+                                    parts = list(self.target_dir.parts)
+                                    
+                                    # Find the 'io' directory which is the base output directory
+                                    # Then we want to include only one instance of the space name
+                                    io_index = -1
+                                    for i, part in enumerate(parts):
+                                        if part == "io":
+                                            io_index = i
+                                            break
+                                    
+                                    if io_index >= 0 and io_index + 1 < len(parts):
+                                        # The space name should be right after the 'io' directory
+                                        space_name = parts[io_index + 1]
+                                        
+                                        # Count occurrences of space_name in the path
+                                        space_name_count = parts.count(space_name)
+                                        
+                                        if space_name_count > 1:
+                                            # If duplicated, reconstruct the path with only one instance
+                                            # Include io directory + one instance of space name
+                                            io_dir = Path(*parts[:io_index + 1])  # Path up to and including 'io'
+                                            main_dir = io_dir / space_name  # Add one instance of space name
+                                            
+                                            self.logger.info(f"Fixed duplicated space name in path. Original path: {self.target_dir}, using main dir: {main_dir}")
+                                        else:
+                                            # If not duplicated, use the parent of the target directory
+                                            main_dir = self.target_dir.parent
+                                    else:
+                                        # Fallback: use the parent directory
+                                        main_dir = self.target_dir.parent
+                                    
+                                    # If "attachments" is in the source, use the attachments directory at the main level
+                                    if "attachments" in src:
+                                        # Extract just the attachments part and what follows
+                                        attachment_path = src[src.find("attachments"):]
+                                        absolute_path = os.path.join(str(main_dir), attachment_path)
+                                        img['src'] = f"{absolute_path}"
+                                        self.logger.info(f"Updated src to main directory attachment path: {img['src']}")
+                                    elif "images" in src:
+                                        # Extract just the images part and what follows
+                                        images_path = src[src.find("images"):]
+                                        absolute_path = os.path.join(str(main_dir), images_path)
+                                        img['src'] = f"{absolute_path}"
+                                        self.logger.info(f"Updated src to main directory images path: {img['src']}")
+                                    else:
+                                        # For other resources, keep the path relative to the target directory
+                                        absolute_path = os.path.join(str(self.target_dir), src)
+                                        img['src'] = f"{absolute_path}"
+                                        self.logger.info(f"Updated src to target directory path: {img['src']}")
+                                except Exception as e:
+                                    self.logger.error(f"Error constructing image path: {e}", exc_info=True)
+                                    # Fallback to using the target directory
+                                    absolute_path = os.path.join(str(self.target_dir), src)
+                                    img['src'] = f"{absolute_path}"
+                            else:
+                                # Fallback to current working directory if no target_dir is provided
+                                base_dir = os.getcwd()
+                                absolute_path = os.path.join(base_dir, src)
+                                img['src'] = f"{absolute_path}"
+                                self.logger.info(f"Updated src to absolute path: {img['src']}")
                 
                 # Retain style attribute if not Confluence-specific
                 if 'style' in img.attrs and 'confluence' in img['style']:
