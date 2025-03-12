@@ -19,10 +19,23 @@ Key features:
 - Can include/exclude filenames from output
 - Handles sorting and indentation of the tree
 
-Usage:
-    tree_builder = DocumentTreeBuilder(input_dir, output_dir)
-    tree_builder.build_tree()
-    tree_builder.export_tree(format='table', separator=';')
+This module can be used in two ways:
+1. As a library by importing the DocumentTreeBuilder class
+   ```python
+   from core.document_tree import DocumentTreeBuilder
+   tree_builder = DocumentTreeBuilder(input_dir, output_dir)
+   tree_builder.build_tree()
+   tree_builder.export_tree(format='table', separator=';')
+   ```
+
+2. As a standalone CLI tool
+   ```bash
+   python -m core.document_tree --input-dir /path/to/files --output-dir /path/to/output
+   ```
+
+Note: For more consistent command-line interface usage, consider using the main.py
+entry point with the --generate-tree option, which provides unified configuration
+and processing.
 """
 
 import argparse
@@ -294,7 +307,16 @@ class DocumentTreeBuilder:
             return markdown_content
 
 def main():
-    """Main entry point for the document tree generator."""
+    """
+    Main entry point for the document tree generator when run as a standalone script.
+    
+    This function provides a command-line interface for generating document trees
+    directly from this module. For more integrated functionality with the entire
+    application, use the main.py entry point with the --generate-tree option.
+    
+    Example usage:
+        python -m core.document_tree --input-dir /path/to/files --output-dir /path/to/output
+    """
     parser = argparse.ArgumentParser(
         description="Generate a document tree structure from Confluence HTML exports"
     )

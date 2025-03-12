@@ -42,6 +42,7 @@ from utils.utilities import (
 )
 
 from core.file_processor import FileProcessor
+from core.document_tree import DocumentTreeBuilder
 
 class ConfigurationError(Exception):
     """
@@ -140,6 +141,41 @@ class HTMLProcessorCLI:
             help='Show what would be done without making changes'
         )
         
+        # Add document tree specific options
+        doc_tree_group = parser.add_argument_group('Document Tree Options')
+        
+        doc_tree_group.add_argument(
+            '--generate-tree',
+            action='store_true',
+            help='Generate a document tree representation of processed files'
+        )
+        
+        doc_tree_group.add_argument(
+            '--tree-format',
+            choices=['tree', 'table'],
+            default='table',
+            help='Format for the document tree output'
+        )
+        
+        doc_tree_group.add_argument(
+            '--show-filenames',
+            action='store_true',
+            help='Show filenames in document tree output'
+        )
+        
+        doc_tree_group.add_argument(
+            '--hide-filenames',
+            action='store_true',
+            help='Hide filenames in document tree output'
+        )
+        
+        doc_tree_group.add_argument(
+            '--tree-separator',
+            type=str,
+            default=';',
+            help='Separator for table format document tree'
+        )
+        
         parser.add_argument(
             '--version',
             action='version',
@@ -179,6 +215,21 @@ class HTMLProcessorCLI:
                 config['create_docx'] = True
             if args.log_level:
                 config['log_level'] = args.log_level
+
+            # Add document tree configuration
+            if 'document_tree' not in config:
+                config['document_tree'] = {}
+                
+            if args.tree_format:
+                config['document_tree']['format'] = args.tree_format
+            if args.tree_separator:
+                config['document_tree']['separator'] = args.tree_separator
+                
+            # Handle show/hide filenames options
+            if args.show_filenames:
+                config['document_tree']['show_filenames'] = True
+            elif args.hide_filenames:
+                config['document_tree']['show_filenames'] = False
 
             # Setup logging with the configured options
             setup_logging(config, args.log_file)
@@ -247,6 +298,36 @@ class HTMLProcessorCLI:
             self.stats['errors'].append(str(e))
             raise
 
+    def generate_document_tree(self, args: argparse.Namespace, config: Dict[str, Any]) -> None:
+        """
+        Generate document tree representation of processed files.
+
+        Args:
+            args: Command line arguments
+            config: Application configuration
+        """
+        try:
+            self.logger.info("Generating document tree...")
+            
+            tree_builder = DocumentTreeBuilder(
+                input_dir=config['output_directory'],
+                output_dir=config['output_directory'],
+                config=config
+            )
+            
+            tree_builder.build_tree()
+            output = tree_builder.export_markdown(args.dry_run)
+            
+            if args.dry_run:
+                self.logger.info("Document tree preview (dry run):")
+                self.logger.info("\n" + output)
+            else:
+                self.logger.info("Document tree generated successfully")
+
+        except Exception as e:
+            self.logger.error(f"Error generating document tree: {e}")
+            self.stats['errors'].append(f"Document tree generation failed: {str(e)}")
+
     def print_summary(self) -> None:
         """Print processing summary and statistics."""
         duration = time.time() - self.start_time
@@ -287,6 +368,10 @@ def main() -> int:
         
         # Process files
         cli.process_files(args, config)
+        
+        # Generate document tree if requested
+        if args.generate_tree:
+            cli.generate_document_tree(args, config)
         
         # Print summary only on successful completion
         cli.print_summary()

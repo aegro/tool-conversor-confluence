@@ -29,13 +29,6 @@ from urllib.parse import urlparse, urljoin
 
 from bs4 import BeautifulSoup, Comment, Tag
 from utils.utilities import get_config
-import argparse
-
-parser = argparse.ArgumentParser(description="Processador de HTML")
-parser.add_argument('--input-dir', required=True, help="Diretório de entrada")
-parser.add_argument('--output-dir', required=True, help="Diretório de saída")
-parser.add_argument('--create-docx', action='store_true', help="Se deseja criar um DOCX")
-args = parser.parse_args()
 
 class HTMLCleaner:
     """
@@ -439,8 +432,6 @@ class HTMLCleaner:
         - Removes unnecessary attributes
         - Preserves essential attributes (src, alt, title, width, height)
         """
-        input_dirhtml = args.input_dir
-        base_url = getattr(self.soup, 'base_url', None)
         for img in self.soup.find_all('img'):
             try:
                 # Keep only essential attributes
@@ -461,14 +452,14 @@ class HTMLCleaner:
                     # If necessary, adjust the src to remove Confluence-specific parts
                     # For now, we'll keep the src as it is
                     if not src.startswith(('http://', 'https://', 'file://', '/')):
-                        if base_url:
+                        if getattr(self.soup, 'base_url', None):
                             # Usa urljoin se o base_url estiver presente
-                            img['src'] = urljoin(base_url, src)
+                            img['src'] = urljoin(getattr(self.soup, 'base_url', ''), src)
                             self.logger.info(f"Updated src to absolute path: {img['src']}")
                         else:
                             # Caso base_url não esteja disponível, use o diretório atual
                             base_dir = os.getcwd()
-                            absolute_path = os.path.join(base_dir, input_dirhtml, src)
+                            absolute_path = os.path.join(base_dir, src)
                             img['src'] = f"{absolute_path}"
                             self.logger.info(f"Updated src to absolute path: {img['src']}")
                 

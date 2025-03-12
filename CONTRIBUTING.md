@@ -23,18 +23,21 @@ Thank you for your interest in contributing to the Tool Conversor Confluence pro
 ### Setting Up Your Development Environment
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/yourusername/tool-conversor-confluence.git
    cd tool-conversor-confluence
    ```
 
 2. Create and activate a virtual environment:
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. Install development dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -62,6 +65,29 @@ The project is organized as follows:
 - Maximum line length: 88 characters
 - Use meaningful variable and function names
 - Use type hints for function parameters and return values
+
+### Command-Line Interface Design
+
+We follow these principles for command-line interfaces:
+
+1. **Single Entry Point**: The primary CLI should be implemented in `main.py`, which serves as the main entry point for the application.
+
+2. **Library vs. CLI Separation**:
+   - Core modules should be designed as libraries without direct CLI functionality
+   - If a module needs standalone CLI capabilities (like `document_tree.py`), it should:
+     - Implement CLI code only in the `main()` function and under `if __name__ == "__main__"`
+     - Include documentation to refer users to the main entry point
+
+3. **Argument Consistency**: Command-line arguments should be consistent across the application:
+   - Use the same argument names for the same functionality
+   - Document all arguments in the README.md file
+   - Group related arguments using `add_argument_group()`
+
+4. **Unified Configuration**: The CLI should integrate with the configuration system:
+   - Command-line arguments should override config file values
+   - Document the relationship between arguments and configuration
+
+5. **No Redundant Parse Calls**: Never call `parse_args()` from imported modules, as this will capture CLI arguments intended for the main script.
 
 ### Imports
 
@@ -157,6 +183,7 @@ pytest --cov=. --cov-report=term
 6. **Submit a pull request** with a clear description of the changes
 
 Your pull request should include:
+
 - A reference to any related issues
 - A summary of changes made
 - Any additional information needed to understand the changes
@@ -176,4 +203,4 @@ When reporting issues, please include:
 
 By contributing to this project, you agree that your contributions will be licensed under the project's license.
 
-Thank you for contributing to Tool Conversor Confluence! 
+Thank you for contributing to Tool Conversor Confluence!
