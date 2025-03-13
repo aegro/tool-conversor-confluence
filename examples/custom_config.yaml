@@ -1,0 +1,43 @@
+# Example custom configuration for Confluence HTML Processor
+#
+# This config file demonstrates various options available for customization
+
+# Basic settings
+input_directory: './my_confluence_export'
+output_directory: './processed_output'
+create_docx: true  # Enable DOCX conversion
+log_level: 'INFO'  # Options: DEBUG, INFO, WARNING, ERROR
+log_file: 'confluence_processor.log'
+
+# HTML cleaning settings - classes to retain in HTML
+standard_html_classes:
+  table: ['sortable', 'data-table', 'custom-table']
+  td: ['selected', 'header', 'highlight'] 
+  tr: ['odd', 'even', 'top-row']
+  div: ['container', 'row', 'column', 'custom-section']
+  span: ['bold', 'italic', 'underline', 'highlight', 'code']
+  ul: ['list', 'navigation', 'bullet-list']
+  li: ['active', 'current', 'list-item']
+  img: ['thumbnail', 'responsive', 'portrait', 'landscape']
+  a: ['active', 'visited', 'external', 'internal']
+
+# Image settings
+image_settings:
+  border_color: '#00c65e'  # Custom border color for images
+  border_width: '1px'      # Border width
+  allowed_attrs: ['src', 'alt', 'width', 'height', 'title', 'style', 'class']
+
+# HTTP settings for any web requests
+http_settings:
+  timeout: 30       # Timeout in seconds
+  max_retries: 3    # Number of retry attempts
+  user_agent: 'Confluence HTML Processor Bot/1.0'
+
+# Document tree settings
+document_tree:
+  format: 'tree'              # 'tree' for markdown, 'table' for CSV
+  separator: ';'              # Separator for table format
+  show_filenames: true        # Show original filenames in document tree
+  include_metadata: true      # Include page metadata in the document tree
+  max_depth: 10               # Maximum depth to process
+  output_file: 'document_structure.md'  # Custom output filename 

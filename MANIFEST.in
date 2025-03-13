@@ -1,0 +1,14 @@
+include LICENSE
+include README.md
+include CHANGELOG.md
+include CONTRIBUTING.md
+include requirements.txt
+include config/*.yaml
+recursive-include docs *.md
+recursive-include examples *.md *.yaml *.py
+recursive-exclude io *
+recursive-exclude venv *
+recursive-exclude __pycache__ *
+recursive-exclude .github *
+recursive-exclude .cursor *
+global-exclude *.py[cod] __pycache__ *.so *.log *.bak 

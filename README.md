@@ -1,17 +1,39 @@
 # Tool Conversor Confluence
 
-A command-line application for processing Confluence HTML exports—cleaning up the HTML, optionally converting it to DOCX, and organizing file structures based on breadcrumbs.
+[![GitHub Actions](https://github.com/yourusername/tool-conversor-confluence/actions/workflows/python-tests.yml/badge.svg)](https://github.com/yourusername/tool-conversor-confluence/actions/workflows/python-tests.yml)
+[![PyPI version](https://badge.fury.io/py/tool-conversor-confluence.svg)](https://badge.fury.io/py/tool-conversor-confluence)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Versions](https://img.shields.io/pypi/pyversions/tool-conversor-confluence.svg)](https://pypi.org/project/tool-conversor-confluence/)
+
+A robust command-line tool for processing Confluence HTML exports—cleaning up the HTML, converting it to DOCX (optional), and organizing file structures based on breadcrumbs.
 
 ## Table of Contents
 
-1. [Features](#features)  
-2. [Prerequisites](#prerequisites)  
-3. [Installation](#installation)  
-4. [Configuration](#configuration)  
-5. [Usage](#usage)  
-6. [Running the Document Tree Generator](#running-the-document-tree-generator)  
-7. [Testing](#testing)  
-8. [Troubleshooting](#troubleshooting)
+1. [Why This Tool?](#why-this-tool)
+2. [Features](#features)  
+3. [Prerequisites](#prerequisites)  
+4. [Installation](#installation)  
+5. [Configuration](#configuration)  
+6. [Usage](#usage)  
+7. [Running the Document Tree Generator](#running-the-document-tree-generator)  
+8. [Testing](#testing)  
+9. [Troubleshooting](#troubleshooting)
+10. [Contributing](#contributing)
+11. [License](#license)
+
+---
+
+## Why This Tool?
+
+Migrating documentation from Confluence can be challenging due to Confluence's specific HTML markup and structure. This tool addresses several common migration challenges:
+
+- **Cleaning up Confluence-specific code**: Removes Confluence-specific classes, scripts, and unnecessary elements.
+- **Standardizing HTML**: Produces clean, standardized HTML that can be easily converted to other formats.
+- **Preserving document structure**: Maintains document hierarchy through breadcrumb-based organization.
+- **Resource handling**: Properly processes and relocates images and attachments.
+- **Document hierarchy visualization**: Generates a tree view or tabular representation of your documentation structure.
+
+If you're looking to migrate from Confluence while maintaining document quality and structure, this tool provides an automated solution to streamline the process.
 
 ---
 
@@ -21,6 +43,8 @@ A command-line application for processing Confluence HTML exports—cleaning up 
 * Organizes files based on breadcrumb hierarchy.  
 * Converts HTML files to DOCX (optional).  
 * Generates a markdown or CSV document tree representation of your Confluence exports.
+* Handles image and attachment resources properly.
+* Preserves document styling while removing Confluence-specific elements.
 
 ---
 
@@ -35,8 +59,16 @@ Make sure you have the following installed on your system:
 
 ## Installation
 
-1. **Clone the repository** or download the source code.  
-2. *(Optional but recommended)* Create and activate a virtual environment:
+### From Source (Recommended for Development)
+
+1. **Clone the repository**:
+
+   ```bash
+   git clone https://github.com/yourusername/tool-conversor-confluence.git
+   cd tool-conversor-confluence
+   ```
+
+2. **Create and activate a virtual environment**:
 
    ```bash
    python -m venv venv
@@ -48,6 +80,22 @@ Make sure you have the following installed on your system:
    ```bash
    pip install -r requirements.txt
    ```
+
+### Using pip (For End Users)
+
+```bash
+pip install tool-conversor-confluence
+```
+
+### Quick Start
+
+After installation, you can verify the tool is working correctly by running:
+
+```bash
+python main.py --help
+```
+
+This should display the available command-line options and their descriptions.
 
 ---
 
@@ -71,6 +119,27 @@ document_tree:
 
 * Adjust paths (e.g., `input_directory`, `output_directory`) as needed.  
 * If you need a custom configuration file, create your own YAML file and pass its path with the `--config` option.
+
+### Custom Configuration Example
+
+Create a file `my_config.yaml`:
+
+```yaml
+input_directory: '/path/to/my/confluence_exports'
+output_directory: '/path/to/my/clean_output'
+create_docx: true
+log_level: 'DEBUG'
+
+document_tree:
+  format: 'tree'
+  show_filenames: true
+```
+
+Then use it with:
+
+```bash
+python main.py --config my_config.yaml
+```
 
 ---
 
@@ -112,14 +181,31 @@ python main.py --input-dir <PATH_TO_HTML_FILES> \
 * **--hide-filenames**: Hide original filenames in the document tree (show only document titles).
 * **--tree-separator**: Separator for `table` format output. Default is `;`.
 
-**Example**:
+### Common Usage Examples
 
+**Basic HTML Cleaning**:
 ```bash
-# Process HTML files and convert to DOCX
-python main.py -i /path/to/confluence_exports -o /path/to/output --create-docx
+python main.py -i /path/to/confluence_exports -o /path/to/output
+```
 
-# Process HTML files and generate a document tree
+**Clean HTML and Convert to DOCX**:
+```bash
+python main.py -i /path/to/confluence_exports -o /path/to/output --create-docx
+```
+
+**Process HTML and Generate a Document Tree**:
+```bash
 python main.py -i /path/to/confluence_exports -o /path/to/output --generate-tree --tree-format tree
+```
+
+**Run in Debug Mode with Custom Configuration**:
+```bash
+python main.py --config my_config.yaml --log-level DEBUG
+```
+
+**Test Run Without Modifying Files**:
+```bash
+python main.py -i /path/to/confluence_exports -o /path/to/output --dry-run
 ```
 
 ---
@@ -154,7 +240,36 @@ python -m core.document_tree \
   --show-filenames
 ```
 
-This generates either a Markdown file or CSV (depending on the `--format`) that outlines the hierarchy of your Confluence content.
+### Document Tree Output Examples
+
+**Tree Format Sample**:
+```
+.
+├── Space Home
+│   ├── Product Documentation
+│   │   ├── User Guide
+│   │   │   ├── Getting Started
+│   │   │   └── Advanced Features
+│   │   └── API Reference
+│   └── Technical Specs
+└── Knowledge Base
+    ├── FAQs
+    └── Troubleshooting
+```
+
+**Table Format Sample**:
+```
+Space Home;
+Space Home;Product Documentation;
+Space Home;Product Documentation;User Guide;
+Space Home;Product Documentation;User Guide;Getting Started;
+Space Home;Product Documentation;User Guide;Advanced Features;
+Space Home;Product Documentation;API Reference;
+Space Home;Technical Specs;
+Space Home;Knowledge Base;
+Space Home;Knowledge Base;FAQs;
+Space Home;Knowledge Base;Troubleshooting;
+```
 
 ---
 
@@ -166,16 +281,58 @@ We use **pytest** for unit tests. To run the tests:
 pytest
 ```
 
-Additionally, there are some integration tests in `test_main.py` to ensure the main workflow executes properly.
+For more detailed test output:
+
+```bash
+pytest -v
+```
+
+To run tests with coverage reporting:
+
+```bash
+pytest --cov=core --cov=utils --cov-report=term-missing
+```
 
 ---
 
 ## Troubleshooting
 
-* If you encounter permission issues, ensure your Python environment has the right privileges.  
-* Verify all required Python packages are installed by checking `requirements.txt` or re-running `pip install -r requirements.txt`.  
-* Use `--log-level DEBUG` to output additional logs for troubleshooting complex issues.
+### Common Issues
+
+#### Permission Errors
+* **Issue**: You encounter permission issues when writing to output directories.
+* **Solution**: Ensure your Python environment has write access to the specified output directory.
+
+#### Missing Dependencies
+* **Issue**: Import errors when running the tool.
+* **Solution**: Verify all required Python packages are installed by running `pip install -r requirements.txt`.
+
+#### HTML Processing Errors
+* **Issue**: HTML files are not processed correctly.
+* **Solution**: Run with `--log-level DEBUG` to get detailed information about the processing steps.
+
+#### Image Path Problems
+* **Issue**: Images are not displayed correctly in processed HTML.
+* **Solution**: Check that the image paths in the original HTML are correct and that the `--output-dir` is correctly specified.
+
+### Getting Help
+
+If you encounter issues not covered here, please:
+1. Check the existing issues on GitHub
+2. Open a new issue with detailed information about your problem
 
 ---
 
-Happy coding!
+## Contributing
+
+We welcome contributions to improve the tool! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to the project.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+Happy migrating from Confluence!
