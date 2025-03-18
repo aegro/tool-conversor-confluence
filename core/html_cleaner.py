@@ -196,6 +196,59 @@ class HTMLCleaner:
                 background-color: #f5f5f5;
             }
 
+            /* Code Block Styles */
+            .code-block {
+                margin: 1.5em 0;
+                border-radius: 6px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+                background-color: #f8f8f8;
+                border: 1px solid #e0e0e0;
+            }
+
+            .code-language {
+                background-color: #046062;
+                color: white;
+                font-size: 0.8em;
+                padding: 4px 12px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .code-content {
+                overflow-x: auto;
+            }
+
+            .code-content pre {
+                margin: 0;
+                padding: 16px;
+                overflow-x: auto;
+                background-color: #282c34;
+                color: #f8f8f2;
+                line-height: 1.5;
+                font-size: 14px;
+            }
+
+            /* Language-specific syntax highlighting */
+            .language-java .keyword,
+            .language-javascript .keyword, 
+            .language-python .keyword {
+                color: #ff79c6;
+            }
+
+            .language-java .string,
+            .language-javascript .string,
+            .language-python .string {
+                color: #f1fa8c;
+            }
+
+            .language-java .comment,
+            .language-javascript .comment,
+            .language-python .comment {
+                color: #6272a4;
+            }
+
             /* Column Width Classes */
             .column-25 { width: 25%; }
             .column-33 { width: 33.333%; }
@@ -282,10 +335,10 @@ class HTMLCleaner:
             if self.soup.html:
                 self.soup.html.insert(0, head)
         
-        # Add Google Fonts link
+        # Add Google Fonts link for Code fonts
         fonts_link = self.soup.new_tag('link')
         fonts_link['rel'] = 'stylesheet'
-        fonts_link['href'] = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=Roboto:wght@400;700&display=swap'
+        fonts_link['href'] = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Roboto:wght@400;700&display=swap'
         head.append(fonts_link)
         
         # Add custom styles
@@ -309,6 +362,7 @@ class HTMLCleaner:
             self._process_status_macros()
             self._process_expand_containers()
             self._process_decision_lists()
+            self._process_code_blocks()
             self._convert_column_layouts()
             
             # Unwrap table wrappers
@@ -952,3 +1006,57 @@ class HTMLCleaner:
             
             # Replace the original decision list with the new decision box
             decision_list.replace_with(decision_box)
+
+    def _process_code_blocks(self) -> None:
+        """Process Confluence code blocks and convert them to beautifully styled code snippets."""
+        for code_div in self.soup.find_all('div', class_='code'):
+            try:
+                # Find the pre tag with syntaxhighlighter class
+                pre_tag = code_div.find('pre', class_='syntaxhighlighter-pre')
+                
+                if pre_tag:
+                    # Extract language information if available
+                    language = 'text'  # Default language
+                    params = pre_tag.get('data-syntaxhighlighter-params', '')
+                    brush_match = re.search(r'brush:\s*(\w+)', params)
+                    
+                    if brush_match:
+                        language = brush_match.group(1).lower()
+                    
+                    # Create a new code block container
+                    code_container = self.soup.new_tag('div')
+                    code_container['class'] = ['code-block']
+                    
+                    # Add language indicator if available
+                    if language != 'text':
+                        lang_indicator = self.soup.new_tag('div')
+                        lang_indicator['class'] = ['code-language']
+                        lang_indicator.string = language.capitalize()
+                        code_container.append(lang_indicator)
+                    
+                    # Create code content div
+                    code_content = self.soup.new_tag('div')
+                    code_content['class'] = ['code-content']
+                    
+                    # Clean and preserve the code
+                    code_text = pre_tag.get_text()
+                    # Unescape HTML entities if present
+                    code_text = code_text.replace('&quot;', '"').replace('&lt;', '<').replace('&gt;', '>')
+                    
+                    # Create pre and code tags
+                    new_pre = self.soup.new_tag('pre')
+                    new_code = self.soup.new_tag('code')
+                    
+                    if language != 'text':
+                        new_code['class'] = [f'language-{language}']
+                    
+                    new_code.string = code_text
+                    new_pre.append(new_code)
+                    code_content.append(new_pre)
+                    code_container.append(code_content)
+                    
+                    # Replace the original code div with the new container
+                    code_div.replace_with(code_container)
+            
+            except Exception as e:
+                self.logger.error(f"Error processing code block: {e}", exc_info=True)
