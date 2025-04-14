@@ -15,9 +15,10 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.html_cleaner import HTMLCleaner
 
+
 class TestHTMLCleaner(unittest.TestCase):
     """Test suite for HTMLCleaner class."""
-    
+
     def setUp(self):
         """Set up test fixtures."""
         self.sample_html = """
@@ -40,12 +41,13 @@ class TestHTMLCleaner(unittest.TestCase):
             </body>
         </html>
         """
-        
+
     def test_html_cleaner_initialization(self):
         """Test that HTMLCleaner can be initialized."""
         cleaner = HTMLCleaner(self.sample_html, Path("test_output"))
         self.assertIsNotNone(cleaner)
         self.assertIsInstance(cleaner.soup, BeautifulSoup)
 
-if __name__ == '__main__':
-    unittest.main() 
+
+if __name__ == "__main__":
+    unittest.main()

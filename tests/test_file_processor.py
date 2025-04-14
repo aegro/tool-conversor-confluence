@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 
 # Add parent directory to path to import modules
 import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import from the correct module path
@@ -15,6 +16,7 @@ from core.file_processor import FileProcessor
 import core.file_processor as file_processor
 
 # --- Dummy implementations to override external dependencies ---
+
 
 def dummy_get_config():
     # Return a simple configuration for filename sanitization
@@ -27,17 +29,21 @@ def dummy_get_config():
         }
     }
 
+
 class DummyHTMLCleaner:
     def __init__(self, html, target_dir):
         self.html = html
+
     def clean(self):
         # For testing purposes, simply return the HTML unchanged.
         return self.html
+
 
 class DummyHtmlToDocx:
     def parse_html_file(self, html_path, docx_path):
         # For testing, simply create an empty file to simulate conversion.
         Path(docx_path).write_text("Dummy DOCX content", encoding="utf-8")
+
 
 # Patch the dependencies within FileProcessor (monkey patch)
 FileProcessor.config = dummy_get_config()
@@ -46,6 +52,7 @@ FileProcessor.HTMLCleaner = DummyHTMLCleaner
 file_processor.HtmlToDocx = DummyHtmlToDocx
 
 # --- Test cases for FileProcessor ---
+
 
 class TestFileProcessor(unittest.TestCase):
     def setUp(self):
@@ -110,7 +117,9 @@ class TestFileProcessor(unittest.TestCase):
         self.write_html_file(self.temp_input_dir, "a.html", self.html_breadcrumb)
         self.write_html_file(self.temp_input_dir, "b.html", self.html_no_breadcrumb)
         self.write_html_file(self.temp_input_dir, "c.txt", "Not HTML")
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         count = fp._count_input_files()
         self.assertEqual(count, 2)
         self.assertEqual(fp.stats["total_input_files"], 2)
@@ -118,8 +127,12 @@ class TestFileProcessor(unittest.TestCase):
     # 4. Test setup_directory_structure with breadcrumbs extraction.
     def test_setup_directory_structure_with_breadcrumbs(self):
         # Create an HTML file with breadcrumb structure.
-        test_file = self.write_html_file(self.temp_input_dir, "test.html", self.html_breadcrumb)
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        test_file = self.write_html_file(
+            self.temp_input_dir, "test.html", self.html_breadcrumb
+        )
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         new_base_dir, space_name = fp.setup_directory_structure()
         # The space name should be the first breadcrumb: "TestSpace"
         self.assertEqual(space_name, "TestSpace")
@@ -130,13 +143,19 @@ class TestFileProcessor(unittest.TestCase):
         for folder in fp.RESOURCE_FOLDERS:
             # The target folder may not exist if no such folder existed in input.
             target = new_base_dir / folder
-            self.assertTrue(target.exists() or not (self.temp_input_dir / folder).exists())
+            self.assertTrue(
+                target.exists() or not (self.temp_input_dir / folder).exists()
+            )
 
     # 5. Test setup_directory_structure fallback to title extraction when breadcrumbs not found.
     def test_setup_directory_structure_with_title(self):
         # Create an HTML file without breadcrumbs.
-        test_file = self.write_html_file(self.temp_input_dir, "test.html", self.html_no_breadcrumb)
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        test_file = self.write_html_file(
+            self.temp_input_dir, "test.html", self.html_no_breadcrumb
+        )
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         new_base_dir, space_name = fp.setup_directory_structure()
         self.assertEqual(space_name, "AnotherSpace")
         self.assertTrue(new_base_dir.exists())
@@ -144,14 +163,20 @@ class TestFileProcessor(unittest.TestCase):
 
     # 6. Test setup_directory_structure raises ValueError when no breadcrumbs and invalid title.
     def test_setup_directory_structure_fail_no_valid_space(self):
-        test_file = self.write_html_file(self.temp_input_dir, "test.html", self.html_invalid)
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        test_file = self.write_html_file(
+            self.temp_input_dir, "test.html", self.html_invalid
+        )
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         with self.assertRaises(ValueError):
             fp.setup_directory_structure()
 
     # 7. Test _sanitize_filename for various inputs.
     def test_sanitize_filename(self):
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         # Empty string should return "untitled"
         self.assertEqual(fp._sanitize_filename(""), "untitled")
         # String with invalid characters.
@@ -174,7 +199,9 @@ class TestFileProcessor(unittest.TestCase):
         soup = BeautifulSoup(html, "lxml")
         fake_file = self.temp_input_dir / "dummy.html"
         fake_file.write_text(html, encoding="utf-8")
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         filename = fp._get_safe_filename(soup, fake_file, "TestSpace")
         # The space prefix should be removed and .html appended.
         self.assertTrue(filename.endswith(".html"))
@@ -182,11 +209,15 @@ class TestFileProcessor(unittest.TestCase):
 
     # 9. Test _create_directory_path creates nested directories.
     def test_create_directory_path(self):
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         breadcrumbs = ["Folder1", "Folder2", "Folder3"]
         target_path = fp._create_directory_path(self.temp_output_dir, breadcrumbs)
         self.assertTrue(target_path.exists())
-        self.assertEqual(target_path, self.temp_output_dir / "Folder1" / "Folder2" / "Folder3")
+        self.assertEqual(
+            target_path, self.temp_output_dir / "Folder1" / "Folder2" / "Folder3"
+        )
 
     # 10. Test _copy_resource_folders by creating fake resource folders.
     def test_copy_resource_folders(self):
@@ -197,7 +228,9 @@ class TestFileProcessor(unittest.TestCase):
         test_file = resource_dir / "img1.png"
         test_file.write_text("fake image content", encoding="utf-8")
         # Also add a folder that does not exist (e.g., "nonexistent").
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         # First, create a dummy HTML file so that setup_directory_structure works.
         self.write_html_file(self.temp_input_dir, "dummy.html", self.html_breadcrumb)
         new_base_dir, _ = fp.setup_directory_structure()
@@ -211,8 +244,12 @@ class TestFileProcessor(unittest.TestCase):
 
     # 11. Test _read_html_file and _save_html_file.
     def test_read_and_save_html_file(self):
-        test_file = self.write_html_file(self.temp_input_dir, "read_test.html", self.html_breadcrumb)
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        test_file = self.write_html_file(
+            self.temp_input_dir, "read_test.html", self.html_breadcrumb
+        )
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         # Test _read_html_file
         soup = fp._read_html_file(test_file)
         self.assertIsInstance(soup, BeautifulSoup)
@@ -226,43 +263,59 @@ class TestFileProcessor(unittest.TestCase):
     # 12. Test _process_html_file success path (without DOCX conversion).
     def test_process_html_file_success_without_docx(self):
         # Create a valid HTML file with breadcrumbs.
-        test_file = self.write_html_file(self.temp_input_dir, "proc_test.html", self.html_breadcrumb)
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir, create_docx=False)
-        
+        test_file = self.write_html_file(
+            self.temp_input_dir, "proc_test.html", self.html_breadcrumb
+        )
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir,
+            output_dir=self.temp_output_dir,
+            create_docx=False,
+        )
+
         # Create the target directory structure since the actual _process_html_file might not
         target_dir = self.temp_output_dir / "TestSpace" / "SubPage"
         target_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Call _process_html_file directly.
-        success, msg = fp._process_html_file(test_file, self.temp_output_dir, "TestSpace")
-        
+        success, msg = fp._process_html_file(
+            test_file, self.temp_output_dir, "TestSpace"
+        )
+
         # For the test to pass, we'll manually create the expected file
         expected_filename = "Test Title.html"
         target_file = target_dir / expected_filename
         target_file.write_text("<html>Test content</html>", encoding="utf-8")
-        
+
         self.assertTrue(success)
         self.assertTrue(target_file.exists())
 
     # 13. Test _process_html_file success path with DOCX conversion.
     def test_process_html_file_success_with_docx(self):
         # Create a valid HTML file.
-        test_file = self.write_html_file(self.temp_input_dir, "docx_test.html", self.html_breadcrumb)
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir, create_docx=True)
-        
+        test_file = self.write_html_file(
+            self.temp_input_dir, "docx_test.html", self.html_breadcrumb
+        )
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir,
+            output_dir=self.temp_output_dir,
+            create_docx=True,
+        )
+
         # Create the target directory structure
         target_dir = self.temp_output_dir / "TestSpace" / "SubPage"
         target_dir.mkdir(parents=True, exist_ok=True)
-        
-        success, msg = fp._process_html_file(test_file, self.temp_output_dir, "TestSpace")
-        
+
+        success, msg = fp._process_html_file(
+            test_file, self.temp_output_dir, "TestSpace"
+        )
+
         # Create the expected files for testing
         expected_html = target_dir / "Test Title.html"
         expected_html.write_text("<html>Test content</html>", encoding="utf-8")
-        
+
         expected_docx = target_dir / "Test Title.docx"
         expected_docx.write_text("Dummy DOCX content", encoding="utf-8")
-        
+
         self.assertTrue(success)
         self.assertTrue(expected_docx.exists())
         # And stats should be incremented.
@@ -273,7 +326,11 @@ class TestFileProcessor(unittest.TestCase):
         # Create multiple HTML files.
         self.write_html_file(self.temp_input_dir, "file1.html", self.html_breadcrumb)
         self.write_html_file(self.temp_input_dir, "file2.html", self.html_breadcrumb)
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir, create_docx=True)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir,
+            output_dir=self.temp_output_dir,
+            create_docx=True,
+        )
         stats = fp.process_files()
         # total_input_files should equal 2
         self.assertEqual(stats["total_input_files"], 2)
@@ -287,7 +344,9 @@ class TestFileProcessor(unittest.TestCase):
 
     # 15. Test _organize_duplicates moves files when parent folder name equals file stem.
     def test_organize_duplicates(self):
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         # Create a directory structure: output_dir/Foo and file output_dir/Foo.html inside output_dir/Foo/
         dup_dir = self.temp_output_dir / "Foo"
         dup_dir.mkdir(exist_ok=True)
@@ -304,7 +363,9 @@ class TestFileProcessor(unittest.TestCase):
 
     # 16. Test _log_processing_stats calculates files_not_processed.
     def test_log_processing_stats(self):
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         # Manually set stats values.
         fp.stats["total_input_files"] = 10
         fp.stats["processed_files"] = 7
@@ -324,13 +385,19 @@ class TestFileProcessor(unittest.TestCase):
   </body>
 </html>"""
         soup = BeautifulSoup(html, "lxml")
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         breadcrumbs = fp._extract_breadcrumbs(soup)
         self.assertEqual(breadcrumbs, ["Alpha", "Beta"])
 
     # 18. Test _convert_to_docx by verifying that a DOCX file is created.
     def test_convert_to_docx(self):
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir, create_docx=True)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir,
+            output_dir=self.temp_output_dir,
+            create_docx=True,
+        )
         # Create a dummy HTML file in output.
         html_path = self.temp_output_dir / "sample.html"
         html_path.write_text(self.html_breadcrumb, encoding="utf-8")
@@ -349,7 +416,9 @@ class TestFileProcessor(unittest.TestCase):
         soup = BeautifulSoup(html, "lxml")
         fake_file = self.temp_input_dir / "fallback.html"
         fake_file.write_text(html, encoding="utf-8")
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         filename = fp._get_safe_filename(soup, fake_file, "AnySpace")
         # Should fallback to the file's stem and then add .html
         self.assertEqual(filename, "fallback.html")
@@ -361,7 +430,9 @@ class TestFileProcessor(unittest.TestCase):
             resource_folder = self.temp_input_dir / folder
             if resource_folder.exists():
                 shutil.rmtree(resource_folder)
-        fp = FileProcessor(input_dir=self.temp_input_dir, output_dir=self.temp_output_dir)
+        fp = FileProcessor(
+            input_dir=self.temp_input_dir, output_dir=self.temp_output_dir
+        )
         # Create a dummy HTML to allow setup_directory_structure to run.
         self.write_html_file(self.temp_input_dir, "dummy.html", self.html_breadcrumb)
         new_base_dir, _ = fp.setup_directory_structure()
@@ -370,6 +441,7 @@ class TestFileProcessor(unittest.TestCase):
             fp._copy_resource_folders(new_base_dir)
         except Exception as e:
             self.fail(f"_copy_resource_folders raised an exception unexpectedly: {e}")
+
 
 if __name__ == "__main__":
     unittest.main()

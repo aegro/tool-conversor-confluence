@@ -16,7 +16,7 @@ are named to clearly indicate what functionality they're testing.
 
 To run these tests:
     python -m unittest test_main.py
-    
+
 Or with pytest:
     pytest test_main.py
 """
@@ -50,21 +50,22 @@ from main import (clean_confluence_html, extract_breadcrumbs, create_directory_p
                  remove_footer_section, remove_breadcrumb_section, organize_duplicate_named_files)
 """
 
+
 class TestConfluenceHtmlCleaner(unittest.TestCase):
     """
     Test suite for HTML cleaning functions in the Confluence HTML Export Processor.
-    
+
     This test class covers all aspects of HTML cleaning, including:
     - Removing Confluence-specific elements and attributes
     - Cleaning up HTML structure
     - Processing images and tables
     - Handling breadcrumbs and navigation elements
     """
-    
+
     def setUp(self):
         """
         Set up test fixtures before each test method.
-        
+
         This method creates a sample HTML document with various Confluence-specific
         elements that will be used by individual test methods.
         """
@@ -97,205 +98,217 @@ class TestConfluenceHtmlCleaner(unittest.TestCase):
             </body>
         </html>
         """
-        self.soup = BeautifulSoup(self.sample_html, 'html.parser')
+        self.soup = BeautifulSoup(self.sample_html, "html.parser")
 
     def test_remove_meta_elements(self):
         soup = remove_meta_elements(self.soup)
-        self.assertEqual(len(soup.find_all('meta')), 0)
+        self.assertEqual(len(soup.find_all("meta")), 0)
 
     def test_convert_user_links_to_strong(self):
         soup = convert_user_links_to_strong(self.soup)
-        user_link = soup.find('a', href=lambda x: x and 'people' in x and 'confluence' in x)
+        user_link = soup.find(
+            "a", href=lambda x: x and "people" in x and "confluence" in x
+        )
         self.assertIsNone(user_link)
-        self.assertEqual(soup.find('strong').text, 'John Doe')
+        self.assertEqual(soup.find("strong").text, "John Doe")
 
     def test_remove_all_scripts(self):
         soup = remove_all_scripts(self.soup)
-        self.assertEqual(len(soup.find_all('script')), 0)
+        self.assertEqual(len(soup.find_all("script")), 0)
 
     def test_remove_all_styles(self):
         soup = remove_all_styles(self.soup)
-        self.assertEqual(len(soup.find_all('style')), 0)
+        self.assertEqual(len(soup.find_all("style")), 0)
 
     def test_remove_all_links(self):
         soup = remove_all_links(self.soup)
-        self.assertEqual(len(soup.find_all('link')), 0)
+        self.assertEqual(len(soup.find_all("link")), 0)
 
     def test_replace_created_by_text(self):
         soup = replace_created_by_text(self.soup)
-        metadata_text = soup.find('p').get_text()
-        self.assertEqual(metadata_text, 'Criado por John Doe em 2023-12-28')
+        metadata_text = soup.find("p").get_text()
+        self.assertEqual(metadata_text, "Criado por John Doe em 2023-12-28")
 
     def test_clean_attributes_and_classes(self):
         soup = clean_attributes_and_classes(self.soup)
-        div = soup.find('div', class_='container')
-        span = soup.find('span', class_='bold')
-        self.assertEqual(div['class'], ['container'])
-        self.assertEqual(span['class'], ['bold'])
-        self.assertNotIn('data-test', soup.find('img').attrs)
+        div = soup.find("div", class_="container")
+        span = soup.find("span", class_="bold")
+        self.assertEqual(div["class"], ["container"])
+        self.assertEqual(span["class"], ["bold"])
+        self.assertNotIn("data-test", soup.find("img").attrs)
 
     def test_remove_empty_divs_and_spans(self):
         soup = remove_empty_divs_and_spans(self.soup)
-        self.assertEqual(len(soup.find_all('div')), 4) 
+        self.assertEqual(len(soup.find_all("div")), 4)
 
     def test_remove_onclick_and_javascript_attributes(self):
         # Add a test tag with onclick and href="javascript:..."
-        test_tag = self.soup.new_tag('a', href='javascript:void(0);', onclick="alert('test')")
+        test_tag = self.soup.new_tag(
+            "a", href="javascript:void(0);", onclick="alert('test')"
+        )
         self.soup.body.append(test_tag)
         soup = remove_onclick_and_javascript_attributes(self.soup)
-        self.assertNotIn('onclick', test_tag.attrs)
-        self.assertNotIn('href', test_tag.attrs)
+        self.assertNotIn("onclick", test_tag.attrs)
+        self.assertNotIn("href", test_tag.attrs)
 
     def test_clean_tables(self):
         soup = clean_tables(self.soup)
-        table = soup.find('table')
-        self.assertNotIn('width', table.attrs)
-        self.assertIn('border', table.attrs)
-        self.assertEqual(table['border'], '1')
-        self.assertNotIn('colgroup', str(soup))
+        table = soup.find("table")
+        self.assertNotIn("width", table.attrs)
+        self.assertIn("border", table.attrs)
+        self.assertEqual(table["border"], "1")
+        self.assertNotIn("colgroup", str(soup))
 
     def test_remove_unnecessary_nested_divs(self):
         # Create a nested div structure
-        nested_div = self.soup.new_tag('div')
-        nested_div.append(self.soup.new_tag('div'))
+        nested_div = self.soup.new_tag("div")
+        nested_div.append(self.soup.new_tag("div"))
         self.soup.body.append(nested_div)
         soup = remove_unnecessary_nested_divs(self.soup)
         # After cleaning, there should be no more nested divs
-        self.assertEqual(len(soup.find_all('div', recursive=True)), 5)
+        self.assertEqual(len(soup.find_all("div", recursive=True)), 5)
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_copy_image_to_local(self, mock_get):
         # Mock the response for requests.get
         mock_response = Mock()
-        mock_response.iter_content.return_value = [b'test image data']
+        mock_response.iter_content.return_value = [b"test image data"]
         mock_get.return_value = mock_response
 
         # Test with a URL
-        img_src = 'https://example.com/image.jpg'
-        target_dir = Path('test_output')
+        img_src = "https://example.com/image.jpg"
+        target_dir = Path("test_output")
         new_src = copy_image_to_local(img_src, target_dir)
-        self.assertEqual(new_src, 'img/image.jpg')
-        self.assertTrue((target_dir / 'img' / 'image.jpg').exists())
+        self.assertEqual(new_src, "img/image.jpg")
+        self.assertTrue((target_dir / "img" / "image.jpg").exists())
 
         # Clean up
         shutil.rmtree(target_dir)
 
-    @patch('main.copy_image_to_local')
+    @patch("main.copy_image_to_local")
     def test_clean_images(self, mock_copy_image):
-        mock_copy_image.return_value = 'img/image.png'
-        soup = clean_images(self.soup, Path('test_output'))
-        img = soup.find('img')
-        self.assertEqual(img['src'], 'img/image.png')
-        self.assertNotIn('class', img.attrs)
-        self.assertNotIn('loading', img.attrs)
-        self.assertIn('style', img.attrs)
+        mock_copy_image.return_value = "img/image.png"
+        soup = clean_images(self.soup, Path("test_output"))
+        img = soup.find("img")
+        self.assertEqual(img["src"], "img/image.png")
+        self.assertNotIn("class", img.attrs)
+        self.assertNotIn("loading", img.attrs)
+        self.assertIn("style", img.attrs)
 
     def test_remove_comments(self):
-        comment = Comment('This is a comment')
+        comment = Comment("This is a comment")
         self.soup.body.append(comment)
         soup = remove_comments(self.soup)
         self.assertNotIn(comment, soup.body)
 
     def test_remove_empty_attributes(self):
-        tag = self.soup.find('img')
-        tag['data-empty'] = ''
+        tag = self.soup.find("img")
+        tag["data-empty"] = ""
         soup = remove_empty_attributes(self.soup)
-        self.assertNotIn('data-empty', tag.attrs)
+        self.assertNotIn("data-empty", tag.attrs)
 
     def test_clean_whitespace(self):
-        tag = self.soup.find('span')
-        tag['class'] = ' bold '
+        tag = self.soup.find("span")
+        tag["class"] = " bold "
         soup = clean_whitespace(self.soup)
-        self.assertEqual(tag['class'], 'bold')
+        self.assertEqual(tag["class"], "bold")
 
     def test_simplify_document_structure(self):
         soup = simplify_document_structure(self.soup)
         # The div with just text content should be removed
-        self.assertEqual(len(soup.find_all('div')), 4)
+        self.assertEqual(len(soup.find_all("div")), 4)
 
     def test_add_h1_heading(self):
-        soup = add_h1_heading(self.soup, 'Test Page')
-        self.assertEqual(soup.find('h1').text, 'Test Page')
+        soup = add_h1_heading(self.soup, "Test Page")
+        self.assertEqual(soup.find("h1").text, "Test Page")
 
     def test_clean_roles(self):
-        tag = self.soup.find('div')
-        tag['role'] = 'test-role'
+        tag = self.soup.find("div")
+        tag["role"] = "test-role"
         soup = clean_roles(self.soup)
-        self.assertNotIn('role', tag.attrs)
+        self.assertNotIn("role", tag.attrs)
 
     def test_remove_footer_section(self):
         soup = remove_footer_section(self.soup)
-        self.assertIsNone(soup.find('section', class_='footer-body'))
+        self.assertIsNone(soup.find("section", class_="footer-body"))
 
     def test_clean_confluence_html(self):
         cleaned_html = clean_confluence_html(self.sample_html)
-        soup = BeautifulSoup(cleaned_html, 'html.parser')
-        self.assertNotIn('confluence-class', cleaned_html)
-        self.assertNotIn('test-macro', cleaned_html)
-        self.assertIn('container', cleaned_html)
-        self.assertNotIn('data-test', cleaned_html)
-        self.assertNotIn('Created by', cleaned_html)
-        self.assertIn('Criado por', cleaned_html)
+        soup = BeautifulSoup(cleaned_html, "html.parser")
+        self.assertNotIn("confluence-class", cleaned_html)
+        self.assertNotIn("test-macro", cleaned_html)
+        self.assertIn("container", cleaned_html)
+        self.assertNotIn("data-test", cleaned_html)
+        self.assertNotIn("Created by", cleaned_html)
+        self.assertIn("Criado por", cleaned_html)
         self.assertIn('border="1"', cleaned_html)
-        self.assertNotIn('colgroup', cleaned_html)
+        self.assertNotIn("colgroup", cleaned_html)
 
     def test_extract_breadcrumbs(self):
         breadcrumbs = extract_breadcrumbs(self.soup)
         self.assertEqual(len(breadcrumbs), 2)
-        self.assertEqual(breadcrumbs[0], 'Space')
-        self.assertEqual(breadcrumbs[1], 'Parent')
+        self.assertEqual(breadcrumbs[0], "Space")
+        self.assertEqual(breadcrumbs[1], "Parent")
 
-    @patch('pathlib.Path.mkdir')
+    @patch("pathlib.Path.mkdir")
     def test_create_directory_path(self, mock_mkdir):
-        base_path = Path('/test/base')
-        breadcrumbs = ['Space', 'Parent', 'Child']
+        base_path = Path("/test/base")
+        breadcrumbs = ["Space", "Parent", "Child"]
         result = create_directory_path(base_path, breadcrumbs)
-        self.assertEqual(str(result), str(Path('/test/base/Space/Parent/Child')))
+        self.assertEqual(str(result), str(Path("/test/base/Space/Parent/Child")))
         self.assertEqual(mock_mkdir.call_count, 3)
 
     def test_remove_breadcrumb_section(self):
         soup = remove_breadcrumb_section(self.soup)
-        self.assertIsNone(soup.find('div', id='breadcrumb-section'))
+        self.assertIsNone(soup.find("div", id="breadcrumb-section"))
 
-    @patch('main.create_directory_path')
-    @patch('builtins.open', new_callable=mock_open)
-    @patch('pathlib.Path.exists')
+    @patch("main.create_directory_path")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("pathlib.Path.exists")
     def test_process_html_file(self, mock_exists, mock_file, mock_create_dir):
         mock_exists.return_value = True
-        mock_create_dir.return_value = Path('/test/output/Space/Parent')
-        mock_file.return_value.__enter__.return_value.read.return_value = self.sample_html
-        file_path = Path('test.html')
-        new_base_dir = Path('/test/output')
-        space_name = 'Space'
-        success, message = process_html_file(file_path, new_base_dir, create_docx=False, space_name=space_name)
+        mock_create_dir.return_value = Path("/test/output/Space/Parent")
+        mock_file.return_value.__enter__.return_value.read.return_value = (
+            self.sample_html
+        )
+        file_path = Path("test.html")
+        new_base_dir = Path("/test/output")
+        space_name = "Space"
+        success, message = process_html_file(
+            file_path, new_base_dir, create_docx=False, space_name=space_name
+        )
         self.assertTrue(success)
-        self.assertIn('Copied to', message)
+        self.assertIn("Copied to", message)
 
-    @patch('pathlib.Path.exists')
-    @patch('pathlib.Path.glob')
-    @patch('shutil.rmtree')
-    @patch('shutil.copytree')
-    @patch('builtins.open')
-    def test_setup_directory_structure(self, mock_file, mock_copytree, mock_rmtree, 
-                                     mock_glob, mock_exists):
+    @patch("pathlib.Path.exists")
+    @patch("pathlib.Path.glob")
+    @patch("shutil.rmtree")
+    @patch("shutil.copytree")
+    @patch("builtins.open")
+    def test_setup_directory_structure(
+        self, mock_file, mock_copytree, mock_rmtree, mock_glob, mock_exists
+    ):
         mock_exists.return_value = True
-        mock_file.return_value.__enter__.return_value.read.return_value = self.sample_html
-        mock_glob.return_value = iter([Path('test.html')])
-        io_dir = Path('io/SA')
+        mock_file.return_value.__enter__.return_value.read.return_value = (
+            self.sample_html
+        )
+        mock_glob.return_value = iter([Path("test.html")])
+        io_dir = Path("io/SA")
         new_base_dir, space_name = setup_directory_structure(io_dir)
         self.assertIsInstance(new_base_dir, Path)
         self.assertIsInstance(space_name, str)
         mock_copytree.assert_called()
 
     def test_organize_duplicate_named_files(self):
-        base_dir = Path('test_output')
-        (base_dir / 'folder1').mkdir(parents=True, exist_ok=True)
-        (base_dir / 'folder1' / 'file1.txt').touch()
-        (base_dir / 'folder2').mkdir(parents=True, exist_ok=True)
-        (base_dir / 'folder2' / 'folder2.txt').touch()
+        base_dir = Path("test_output")
+        (base_dir / "folder1").mkdir(parents=True, exist_ok=True)
+        (base_dir / "folder1" / "file1.txt").touch()
+        (base_dir / "folder2").mkdir(parents=True, exist_ok=True)
+        (base_dir / "folder2" / "folder2.txt").touch()
         organize_duplicate_named_files(base_dir)
-        self.assertTrue((base_dir / 'folder1' / 'file1.txt').exists())
-        self.assertTrue((base_dir / 'folder2' / 'folder2.txt').exists())
+        self.assertTrue((base_dir / "folder1" / "file1.txt").exists())
+        self.assertTrue((base_dir / "folder2" / "folder2.txt").exists())
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

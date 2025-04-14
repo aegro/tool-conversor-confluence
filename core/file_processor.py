@@ -32,18 +32,19 @@ from htmldocx import HtmlToDocx
 from utils.utilities import get_config
 from core.html_cleaner import HTMLCleaner
 
+
 class FileProcessor:
     """
-    Process HTML files exported from Confluence by organizing them according to breadcrumbs 
+    Process HTML files exported from Confluence by organizing them according to breadcrumbs
     and optionally converting them to DOCX format.
-    
+
     This class handles the overall file processing workflow:
     - Scanning input directory for files
     - Setting up output directory structure
     - Processing each HTML file (cleaning and conversion)
     - Managing resource directories (images, attachments)
     - Tracking statistics and errors
-    
+
     Attributes:
         input_dir (Path): Input directory containing HTML files
         output_dir (Path): Output directory for processed files
@@ -62,7 +63,7 @@ class FileProcessor:
         input_dir: Union[str, Path],
         output_dir: Union[str, Path],
         create_docx: bool = False,
-        config: Optional[Dict[str, Any]] = None
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize the FileProcessor.
@@ -72,7 +73,7 @@ class FileProcessor:
             output_dir (Union[str, Path]): Path where processed files will be saved
             create_docx (bool, optional): Whether to create DOCX versions. Defaults to False
             config (Optional[Dict[str, Any]], optional): Configuration override. Defaults to None
-        
+
         Raises:
             FileNotFoundError: If input directory doesn't exist
             ValueError: If directory paths are invalid
@@ -81,38 +82,38 @@ class FileProcessor:
         self.input_dir = Path(input_dir).resolve()
         self.output_dir = Path(output_dir).resolve()
         self.create_docx = create_docx
-        
+
         # Load configuration
         self.config = config or get_config()
-        
+
         # Setup logging
         self.logger = logging.getLogger(__name__)
-        
+
         # Validate directories
         self._validate_directories()
-        
+
         # Initialize statistics tracking dict
         self.stats = {
-            'total_input_files': 0,
-            'processed_files': 0,
-            'failed_files': 0,
-            'created_docx': 0,
-            'errors': []
+            "total_input_files": 0,
+            "processed_files": 0,
+            "failed_files": 0,
+            "created_docx": 0,
+            "errors": [],
         }
-        
+
         # For dry run mode (initialized to False)
         self.dry_run = False
 
     def _count_input_files(self) -> int:
         """
         Count total number of HTML files in input directory.
-        
+
         Recursively scans the input directory to find all HTML files and
         updates the stats dictionary with the count.
 
         Returns:
             int: Total number of HTML files found
-            
+
         Schema:
         ```json
         {
@@ -130,20 +131,20 @@ class FileProcessor:
         ```
         """
         count = sum(1 for _ in self.input_dir.rglob("*.html"))
-        self.stats['total_input_files'] = count
+        self.stats["total_input_files"] = count
         return count
 
     def _validate_directories(self) -> None:
         """
         Validate input and output directory paths.
-        
+
         Checks that the input directory exists and is a directory.
         Creates the output directory if it doesn't exist.
-        
+
         Raises:
             FileNotFoundError: If input directory doesn't exist
             ValueError: If directory paths are invalid
-            
+
         Schema:
         ```json
         {
@@ -163,10 +164,10 @@ class FileProcessor:
         """
         if not self.input_dir.exists():
             raise FileNotFoundError(f"Input directory not found: {self.input_dir}")
-        
+
         if not self.input_dir.is_dir():
             raise ValueError(f"Input path is not a directory: {self.input_dir}")
-            
+
         # Create output directory if it doesn't exist
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -181,7 +182,7 @@ class FileProcessor:
         Raises:
             FileNotFoundError: If no HTML files are found
             ValueError: If no valid breadcrumbs or title are found
-            
+
         Schema:
         ```json
         {
@@ -221,10 +222,10 @@ class FileProcessor:
             space_name = breadcrumbs[0]
         else:
             # Try to extract from title
-            title_tag = soup.find('title')
+            title_tag = soup.find("title")
             if title_tag and title_tag.string:
                 # Extract text within parentheses
-                match = re.search(r'\((.*?)\)', title_tag.string)
+                match = re.search(r"\((.*?)\)", title_tag.string)
                 if match:
                     space_name = match.group(1).strip()
 
@@ -249,7 +250,7 @@ class FileProcessor:
 
         Returns:
             Dict[str, Any]: Processing statistics and results
-            
+
         Schema:
         ```json
         {
@@ -287,36 +288,36 @@ class FileProcessor:
 
             # Process all HTML files
             self._process_html_files(new_base_dir, space_name)
-            
+
             # Organize duplicate named files
             self._organize_duplicates(new_base_dir)
-            
+
             # Check for discrepancies
-            processed_total = self.stats['processed_files'] + self.stats['failed_files']
+            processed_total = self.stats["processed_files"] + self.stats["failed_files"]
             if processed_total != total_files:
                 discrepancy = total_files - processed_total
                 error_msg = f"Discrepancy found: {discrepancy} files were not processed"
                 self.logger.error(error_msg)
-                self.stats['errors'].append(error_msg)
-            
+                self.stats["errors"].append(error_msg)
+
             # Log final statistics
             self._log_processing_stats()
-            
+
             return self.stats
 
         except Exception as e:
             self.logger.error(f"Failed to process files: {e}", exc_info=True)
-            self.stats['errors'].append(str(e))
+            self.stats["errors"].append(str(e))
             raise
 
     def _process_html_files(self, base_dir: Path, space_name: str) -> None:
         """
         Process all HTML files in the input directory.
-        
+
         Args:
             base_dir (Path): Base output directory
             space_name (str): Name of the space
-            
+
         Schema:
         ```json
         {
@@ -339,23 +340,25 @@ class FileProcessor:
         """
         for html_file in self.input_dir.rglob("*.html"):
             try:
-                success, result = self._process_html_file(html_file, base_dir, space_name)
+                success, result = self._process_html_file(
+                    html_file, base_dir, space_name
+                )
                 if success:
-                    self.stats['processed_files'] += 1
+                    self.stats["processed_files"] += 1
                     self.logger.info(
                         f"Processed {html_file.relative_to(self.input_dir)} -> {result}"
                     )
                 else:
-                    self.stats['failed_files'] += 1
+                    self.stats["failed_files"] += 1
                     self.logger.error(
                         f"Failed to process {html_file.relative_to(self.input_dir)}: {result}"
                     )
             except Exception as e:
-                self.stats['failed_files'] = self.stats.get('failed_files', 0) + 1
+                self.stats["failed_files"] = self.stats.get("failed_files", 0) + 1
                 error_msg = f"Error processing {html_file}: {str(e)}"
-                if 'errors' not in self.stats:
-                    self.stats['errors'] = []
-                self.stats['errors'].append(error_msg)
+                if "errors" not in self.stats:
+                    self.stats["errors"] = []
+                self.stats["errors"].append(error_msg)
                 self.logger.error(error_msg, exc_info=True)
 
     def _process_html_file(
@@ -371,7 +374,7 @@ class FileProcessor:
 
         Returns:
             Tuple[bool, str]: (Success status, Result message)
-            
+
         Schema:
         ```json
         {
@@ -407,10 +410,10 @@ class FileProcessor:
         try:
             # Read and parse HTML
             soup = self._read_html_file(file_path)
-            
+
             # Get sanitized filename
             new_filename = self._get_safe_filename(soup, file_path, space_name)
-            
+
             # Extract and validate breadcrumbs
             breadcrumbs = self._extract_breadcrumbs(soup)
             if not breadcrumbs:
@@ -418,7 +421,7 @@ class FileProcessor:
 
             # Create target directory structure
             target_dir = self._create_directory_path(new_base_dir, breadcrumbs[1:])
-            
+
             # Clean HTML content
             cleaner = HTMLCleaner(str(soup), target_dir)
             cleaned_html = cleaner.clean()
@@ -430,7 +433,7 @@ class FileProcessor:
             # Convert to DOCX if requested
             if self.create_docx:
                 self._convert_to_docx(target_html_path, target_dir)
-                self.stats['created_docx'] += 1
+                self.stats["created_docx"] += 1
                 return True, f"Processed HTML and created DOCX in {target_dir}"
 
             return True, f"Processed HTML in {target_dir}"
@@ -442,13 +445,13 @@ class FileProcessor:
     def _read_html_file(self, file_path: Path) -> BeautifulSoup:
         """
         Read and parse HTML file.
-        
+
         Args:
             file_path (Path): Path to HTML file
-            
+
         Returns:
             BeautifulSoup: Parsed HTML content
-            
+
         Schema:
         ```json
         {
@@ -462,7 +465,7 @@ class FileProcessor:
                 "required": ["file_path"]
             },
             "output": {
-                "type": "object", 
+                "type": "object",
                 "description": "BeautifulSoup object containing parsed HTML"
             },
             "exceptions": [
@@ -472,17 +475,17 @@ class FileProcessor:
         }
         ```
         """
-        with file_path.open('r', encoding='utf-8') as f:
-            return BeautifulSoup(f.read(), 'lxml')
+        with file_path.open("r", encoding="utf-8") as f:
+            return BeautifulSoup(f.read(), "lxml")
 
     def _save_html_file(self, file_path: Path, content: str) -> None:
         """
         Save HTML content to file.
-        
+
         Args:
             file_path (Path): Path where HTML will be saved
             content (str): HTML content to save
-            
+
         Schema:
         ```json
         {
@@ -507,19 +510,19 @@ class FileProcessor:
         }
         ```
         """
-        with file_path.open('w', encoding='utf-8') as f:
+        with file_path.open("w", encoding="utf-8") as f:
             f.write(content)
 
     def _extract_breadcrumbs(self, soup: BeautifulSoup) -> List[str]:
         """
         Extract and sanitize breadcrumbs from HTML.
-        
+
         Args:
             soup (BeautifulSoup): Parsed HTML content
-            
+
         Returns:
             List[str]: List of sanitized breadcrumb strings
-            
+
         Schema:
         ```json
         {
@@ -546,28 +549,28 @@ class FileProcessor:
         ```
         """
         breadcrumbs = []
-        breadcrumb_section = soup.find('div', id='breadcrumb-section')
-        
+        breadcrumb_section = soup.find("div", id="breadcrumb-section")
+
         if breadcrumb_section:
-            for span in breadcrumb_section.find_all('span'):
-                link = span.find('a')
+            for span in breadcrumb_section.find_all("span"):
+                link = span.find("a")
                 if link and isinstance(link.string, NavigableString):
                     breadcrumb = self._sanitize_filename(link.string.strip())
                     if breadcrumb:
                         breadcrumbs.append(breadcrumb)
-        
+
         return breadcrumbs
 
     def _sanitize_filename(self, filename: str) -> str:
         """
         Sanitize string for use as filename.
-        
+
         Args:
             filename (str): Original string to sanitize
-            
+
         Returns:
             str: Sanitized filename
-            
+
         Schema:
         ```json
         {
@@ -595,50 +598,52 @@ class FileProcessor:
         """
         if not filename:
             return "untitled"
-        
+
         # Get filename configuration settings
-        filename_settings = self.config.get('filename_settings', {})
-        preserve_spaces = filename_settings.get('preserve_spaces', False)
-        replace_character = filename_settings.get('replace_character', '-')
-        sanitize_characters = filename_settings.get('sanitize_characters', True)
-        url_safe_filenames = filename_settings.get('url_safe_filenames', True)
-        
+        filename_settings = self.config.get("filename_settings", {})
+        preserve_spaces = filename_settings.get("preserve_spaces", False)
+        replace_character = filename_settings.get("replace_character", "-")
+        sanitize_characters = filename_settings.get("sanitize_characters", True)
+        url_safe_filenames = filename_settings.get("url_safe_filenames", True)
+
         # Apply sanitization based on settings
         cleaned = filename
-        
+
         # Remove invalid file system characters if sanitization is enabled
         if sanitize_characters:
-            cleaned = re.sub(r'[<>:"/\\|?*]', '', cleaned)
-        
+            cleaned = re.sub(r'[<>:"/\\|?*]', "", cleaned)
+
         # Handle spaces based on configuration
         if not preserve_spaces:
             # Replace whitespace with the configured replacement character
-            cleaned = re.sub(r'\s+', replace_character, cleaned)
-        
+            cleaned = re.sub(r"\s+", replace_character, cleaned)
+
         # Ensure URL safe filenames if enabled
         if url_safe_filenames:
             # Additional URL-unsafe character removal can be added here if needed
             pass
-        
+
         # Always trim leading/trailing hyphens or replacement characters
         if not preserve_spaces:
             cleaned = cleaned.strip(replace_character)
-        
+
         # Ensure we have a valid filename, even after all processing
         return cleaned or "untitled"
 
-    def _get_safe_filename(self, soup: BeautifulSoup, file_path: Path, space_name: str) -> str:
+    def _get_safe_filename(
+        self, soup: BeautifulSoup, file_path: Path, space_name: str
+    ) -> str:
         """
         Generate safe filename from HTML title or filepath.
-        
+
         Args:
             soup (BeautifulSoup): Parsed HTML content
             file_path (Path): Original file path
             space_name (str): Space name to remove from filename
-            
+
         Returns:
             str: Safe filename with .html extension
-            
+
         Schema:
         ```json
         {
@@ -666,28 +671,28 @@ class FileProcessor:
         }
         ```
         """
-        title_tag = soup.find('title')
+        title_tag = soup.find("title")
         if title_tag and title_tag.string:
             filename = self._sanitize_filename(title_tag.string.strip())
         else:
             filename = file_path.stem
 
         # Remove space name prefix if present
-        filename = re.sub(f'^{re.escape(space_name)}-', '', filename)
-        
+        filename = re.sub(f"^{re.escape(space_name)}-", "", filename)
+
         return f"{filename}.html"
 
     def _create_directory_path(self, base_path: Path, breadcrumbs: List[str]) -> Path:
         """
         Create nested directory structure from breadcrumbs.
-        
+
         Args:
             base_path (Path): Base directory path
             breadcrumbs (List[str]): List of breadcrumb segments
-            
+
         Returns:
             Path: Created directory path
-            
+
         Schema:
         ```json
         {
@@ -698,7 +703,7 @@ class FileProcessor:
                 "properties": {
                     "base_path": {"type": "string", "format": "path", "description": "Base directory path"},
                     "breadcrumbs": {
-                        "type": "array", 
+                        "type": "array",
                         "items": {"type": "string"},
                         "description": "List of breadcrumb segments"
                     }
@@ -725,10 +730,10 @@ class FileProcessor:
     def _copy_resource_folders(self, new_base_dir: Path) -> None:
         """
         Copy resource folders to output directory.
-        
+
         Args:
             new_base_dir (Path): Base output directory
-            
+
         Schema:
         ```json
         {
@@ -753,28 +758,40 @@ class FileProcessor:
         }
         ```
         """
-        self.logger.info(f"Copying resource folders to output directory: {new_base_dir}")
+        self.logger.info(
+            f"Copying resource folders to output directory: {new_base_dir}"
+        )
         for folder in self.RESOURCE_FOLDERS:
             source_folder = self.input_dir / folder
             if source_folder.exists():
                 target_folder = new_base_dir / folder
-                self.logger.info(f"Copying resource folder from {source_folder} to {target_folder}")
-                
+                self.logger.info(
+                    f"Copying resource folder from {source_folder} to {target_folder}"
+                )
+
                 # Log the contents of the source folder before copying
                 try:
                     # Count files in source folder
-                    file_count = sum(1 for _ in source_folder.rglob('*') if _.is_file())
-                    self.logger.debug(f"Resource folder {folder} contains {file_count} files")
-                    
+                    file_count = sum(1 for _ in source_folder.rglob("*") if _.is_file())
+                    self.logger.debug(
+                        f"Resource folder {folder} contains {file_count} files"
+                    )
+
                     # Log some example files for verification
-                    example_files = list(source_folder.rglob('*'))[:5]  # Get up to 5 example files
+                    example_files = list(source_folder.rglob("*"))[
+                        :5
+                    ]  # Get up to 5 example files
                     if example_files:
                         self.logger.debug(f"Example files in {folder}:")
                         for ex_file in example_files:
-                            self.logger.debug(f"  - {ex_file.relative_to(source_folder)}")
+                            self.logger.debug(
+                                f"  - {ex_file.relative_to(source_folder)}"
+                            )
                 except Exception as e:
-                    self.logger.warning(f"Error examining resource folder contents: {e}")
-                
+                    self.logger.warning(
+                        f"Error examining resource folder contents: {e}"
+                    )
+
                 # Perform the copy
                 try:
                     shutil.copytree(source_folder, target_folder, dirs_exist_ok=True)
@@ -782,28 +799,34 @@ class FileProcessor:
                 except Exception as e:
                     self.logger.error(f"Error copying resource folder {folder}: {e}")
             else:
-                self.logger.debug(f"Resource folder not found in input directory: {source_folder}")
-        
+                self.logger.debug(
+                    f"Resource folder not found in input directory: {source_folder}"
+                )
+
         # Verify the copied folders
         for folder in self.RESOURCE_FOLDERS:
             target_folder = new_base_dir / folder
             if target_folder.exists():
                 try:
-                    file_count = sum(1 for _ in target_folder.rglob('*') if _.is_file())
-                    self.logger.debug(f"Copied resource folder {folder} contains {file_count} files")
+                    file_count = sum(1 for _ in target_folder.rglob("*") if _.is_file())
+                    self.logger.debug(
+                        f"Copied resource folder {folder} contains {file_count} files"
+                    )
                 except Exception as e:
-                    self.logger.warning(f"Error verifying copied resource folder {folder}: {e}")
-                    
+                    self.logger.warning(
+                        f"Error verifying copied resource folder {folder}: {e}"
+                    )
+
         self.logger.info(f"Resource folders copy process completed")
 
     def _convert_to_docx(self, html_path: Path, target_dir: Path) -> None:
         """
         Convert HTML file to DOCX format.
-        
+
         Args:
             html_path (Path): Path to HTML file
             target_dir (Path): Directory where DOCX will be saved
-            
+
         Schema:
         ```json
         {
@@ -835,10 +858,10 @@ class FileProcessor:
     def _organize_duplicates(self, base_dir: Path) -> None:
         """
         Organize files that have the same name as their parent folders.
-        
+
         Args:
             base_dir (Path): Base directory to organize
-            
+
         Schema:
         ```json
         {
@@ -878,7 +901,7 @@ class FileProcessor:
     def _log_processing_stats(self) -> None:
         """
         Collect final processing statistics.
-        
+
         Schema:
         ```json
         {
@@ -896,8 +919,9 @@ class FileProcessor:
         ```
         """
         # Remove the logging statements and just update the stats dictionary
-        self.stats.update({
-            'files_not_processed': self.stats['total_input_files'] - (
-                self.stats['processed_files'] + self.stats['failed_files']
-            )
-        })
+        self.stats.update(
+            {
+                "files_not_processed": self.stats["total_input_files"]
+                - (self.stats["processed_files"] + self.stats["failed_files"])
+            }
+        )
