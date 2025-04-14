@@ -731,12 +731,48 @@ class FileProcessor:
         }
         ```
         """
+        self.logger.info(f"Copying resource folders to output directory: {new_base_dir}")
         for folder in self.RESOURCE_FOLDERS:
             source_folder = self.input_dir / folder
             if source_folder.exists():
                 target_folder = new_base_dir / folder
-                shutil.copytree(source_folder, target_folder, dirs_exist_ok=True)
-                self.logger.debug(f"Copied resource folder: {folder}")
+                self.logger.info(f"Copying resource folder from {source_folder} to {target_folder}")
+                
+                # Log the contents of the source folder before copying
+                try:
+                    # Count files in source folder
+                    file_count = sum(1 for _ in source_folder.rglob('*') if _.is_file())
+                    self.logger.debug(f"Resource folder {folder} contains {file_count} files")
+                    
+                    # Log some example files for verification
+                    example_files = list(source_folder.rglob('*'))[:5]  # Get up to 5 example files
+                    if example_files:
+                        self.logger.debug(f"Example files in {folder}:")
+                        for ex_file in example_files:
+                            self.logger.debug(f"  - {ex_file.relative_to(source_folder)}")
+                except Exception as e:
+                    self.logger.warning(f"Error examining resource folder contents: {e}")
+                
+                # Perform the copy
+                try:
+                    shutil.copytree(source_folder, target_folder, dirs_exist_ok=True)
+                    self.logger.info(f"Successfully copied resource folder: {folder}")
+                except Exception as e:
+                    self.logger.error(f"Error copying resource folder {folder}: {e}")
+            else:
+                self.logger.debug(f"Resource folder not found in input directory: {source_folder}")
+        
+        # Verify the copied folders
+        for folder in self.RESOURCE_FOLDERS:
+            target_folder = new_base_dir / folder
+            if target_folder.exists():
+                try:
+                    file_count = sum(1 for _ in target_folder.rglob('*') if _.is_file())
+                    self.logger.debug(f"Copied resource folder {folder} contains {file_count} files")
+                except Exception as e:
+                    self.logger.warning(f"Error verifying copied resource folder {folder}: {e}")
+                    
+        self.logger.info(f"Resource folders copy process completed")
 
     def _convert_to_docx(self, html_path: Path, target_dir: Path) -> None:
         """

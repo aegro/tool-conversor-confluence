@@ -26,6 +26,8 @@ import logging
 from pathlib import Path
 from typing import Dict, Optional, Set, List, Union, Tuple
 from urllib.parse import urlparse, urljoin
+import base64
+from mimetypes import guess_type
 
 from bs4 import BeautifulSoup, Comment, Tag
 from utils.utilities import get_config
@@ -456,6 +458,10 @@ class HTMLCleaner:
     def _clean_attributes_and_classes(self) -> None:
         """Clean and standardize HTML attributes and classes."""
         for tag in self.soup.find_all(True):
+            # Skip image tags here as they are handled in _process_images
+            if tag.name == 'img':
+                continue
+
             # Remove Confluence-specific IDs
             if 'id' in tag.attrs:
                 if tag['id'] in self.confluence_ids or tag['id'].startswith('expander-'):
@@ -482,108 +488,171 @@ class HTMLCleaner:
 
     def _process_images(self) -> None:
         """
-        Clean and standardize image elements.
+        Clean image elements and embed them using Base64 encoding.
         - Removes unnecessary attributes
-        - Preserves essential attributes (src, alt, title, width, height)
+        - Preserves essential attributes (alt, title, width, height)
+        - Embeds image data directly into the src attribute.
         """
         for img in self.soup.find_all('img'):
+            original_src = "N/A"
             try:
-                # Keep only essential attributes
-                allowed_attrs = {'src', 'alt', 'title', 'width', 'height', 'style'}
-                current_attrs = set(img.attrs.keys())
-                
-                # Remove unwanted attributes
-                for attr in current_attrs - allowed_attrs:
-                    del img[attr]
-                
-                # Ensure alt attribute exists
-                if 'alt' not in img.attrs:
-                    img['alt'] = ''
-                
-                # Clean the src attribute
-                if 'src' in img.attrs and img['src']:
-                    src = img['src']
-                    # If necessary, adjust the src to remove Confluence-specific parts
-                    # For now, we'll keep the src as it is
-                    if not src.startswith(('http://', 'https://', 'file://', '/')):
-                        if getattr(self.soup, 'base_url', None):
-                            # Use urljoin if base_url is present
-                            img['src'] = urljoin(getattr(self.soup, 'base_url', ''), src)
-                            self.logger.info(f"Updated src to absolute path: {img['src']}")
+                if 'src' not in img.attrs or not img.attrs['src']:
+                    self.logger.warning("Image tag found without 'src' attribute. Removing tag.")
+                    img.decompose()
+                    continue
+
+                original_src = img.attrs['src']
+                image_path = None
+
+                # Clean the original_src by removing query parameters
+                clean_src = original_src.split('?')[0] if '?' in original_src else original_src
+                self.logger.debug(f"Original src: '{original_src}', Clean src (removed query params): '{clean_src}'")
+
+                # Check if src is already an absolute path (potentially set by previous logic)
+                potential_abs_path = Path(clean_src)
+                if potential_abs_path.is_absolute() and potential_abs_path.is_file():
+                    image_path = potential_abs_path
+                    self.logger.debug(f"Strategy 1 (absolute path): Successfully resolved image path: {image_path}")
+                # Check if src is a relative path that needs resolving
+                elif not clean_src.startswith(('http://', 'https://', 'data:')):
+                    self.logger.debug(f"Starting image path resolution for: '{clean_src}' from '{self.target_dir}'")
+                    
+                    # Strategy 1: Relative to the HTML file's directory (self.target_dir)
+                    potential_path_1 = self.target_dir / clean_src
+                    self.logger.debug(f"Strategy 1: Trying path relative to HTML file: {potential_path_1}")
+                    if potential_path_1.resolve().is_file():
+                        image_path = potential_path_1.resolve()
+                        self.logger.debug(f"Strategy 1: Successfully resolved relative path: {image_path}")
+                    else:
+                        self.logger.debug(f"Strategy 1: Failed to find image at: {potential_path_1}")
+                        
+                        # Strategy 2: Relative to the *parent* directory if src is in 'attachments' or 'images'
+                        # (Assumes HTML is in a subfolder, resources are one level up)
+                        if ("attachments/" in clean_src or "images/" in clean_src) and self.target_dir.parent:
+                           resource_folder = "attachments" if "attachments/" in clean_src else "images"
+                           # Get the part after 'attachments/' or 'images/'
+                           relative_to_resource_folder = clean_src.split(f"{resource_folder}/", 1)[-1]
+                           potential_path_2 = self.target_dir.parent / resource_folder / relative_to_resource_folder
+                           self.logger.debug(f"Strategy 2: Trying path one level up from HTML file: {potential_path_2}")
+                           if potential_path_2.resolve().is_file():
+                               image_path = potential_path_2.resolve()
+                               self.logger.debug(f"Strategy 2: Successfully resolved relative path: {image_path}")
+                           else:
+                               self.logger.debug(f"Strategy 2: Failed to find image at: {potential_path_2}")
+                               
+                               # Strategy 3: Recursive search upwards to find attachments or images folders
+                               if resource_folder in ["attachments", "images"]:
+                                   self.logger.debug(f"Strategy 3: Starting recursive search upwards to find {resource_folder} directory")
+                                   # Start from the directory containing the HTML file and go up
+                                   current_dir = self.target_dir
+                                   search_attempts = 0
+                                   max_attempts = 10  # Prevent infinite loops by limiting search depth
+                                   
+                                   while current_dir and search_attempts < max_attempts:
+                                       self.logger.debug(f"Strategy 3: Searching at level {search_attempts} in {current_dir}")
+                                       # Look for resource folder at this level
+                                       resource_dir = current_dir / resource_folder
+                                       potential_path_3 = resource_dir / relative_to_resource_folder
+                                       self.logger.debug(f"Strategy 3: Checking for image at: {potential_path_3}")
+                                       
+                                       if potential_path_3.resolve().is_file():
+                                           image_path = potential_path_3.resolve()
+                                           self.logger.debug(f"Strategy 3: Successfully resolved path at depth {search_attempts}: {image_path}")
+                                           break
+                                       elif resource_dir.is_dir():
+                                           self.logger.debug(f"Strategy 3: Found resource directory at {resource_dir} but image not found")
+                                       
+                                       # Move up one level
+                                       if current_dir.parent == current_dir:  # Reached root
+                                           self.logger.debug("Strategy 3: Reached filesystem root, stopping search")
+                                           break
+                                           
+                                       current_dir = current_dir.parent
+                                       search_attempts += 1
+                                   
+                                   if not image_path and search_attempts >= max_attempts:
+                                       self.logger.debug(f"Strategy 3: Reached max search depth ({max_attempts}), stopping search")
                         else:
-                            # Find the main output directory 
-                            if self.target_dir:
-                                try:
-                                    # Analyze the path structure to find the correct main directory
-                                    parts = list(self.target_dir.parts)
-                                    
-                                    # Find the 'io' directory which is the base output directory
-                                    # Then we want to include only one instance of the space name
-                                    io_index = -1
-                                    for i, part in enumerate(parts):
-                                        if part == "io":
-                                            io_index = i
-                                            break
-                                    
-                                    if io_index >= 0 and io_index + 1 < len(parts):
-                                        # The space name should be right after the 'io' directory
-                                        space_name = parts[io_index + 1]
-                                        
-                                        # Count occurrences of space_name in the path
-                                        space_name_count = parts.count(space_name)
-                                        
-                                        if space_name_count > 1:
-                                            # If duplicated, reconstruct the path with only one instance
-                                            # Include io directory + one instance of space name
-                                            io_dir = Path(*parts[:io_index + 1])  # Path up to and including 'io'
-                                            main_dir = io_dir / space_name  # Add one instance of space name
-                                            
-                                            self.logger.info(f"Fixed duplicated space name in path. Original path: {self.target_dir}, using main dir: {main_dir}")
-                                        else:
-                                            # If not duplicated, use the parent of the target directory
-                                            main_dir = self.target_dir.parent
-                                    else:
-                                        # Fallback: use the parent directory
-                                        main_dir = self.target_dir.parent
-                                    
-                                    # If "attachments" is in the source, use the attachments directory at the main level
-                                    if "attachments" in src:
-                                        # Extract just the attachments part and what follows
-                                        attachment_path = src[src.find("attachments"):]
-                                        absolute_path = os.path.join(str(main_dir), attachment_path)
-                                        img['src'] = f"{absolute_path}"
-                                        self.logger.info(f"Updated src to main directory attachment path: {img['src']}")
-                                    elif "images" in src:
-                                        # Extract just the images part and what follows
-                                        images_path = src[src.find("images"):]
-                                        absolute_path = os.path.join(str(main_dir), images_path)
-                                        img['src'] = f"{absolute_path}"
-                                        self.logger.info(f"Updated src to main directory images path: {img['src']}")
-                                    else:
-                                        # For other resources, keep the path relative to the target directory
-                                        absolute_path = os.path.join(str(self.target_dir), src)
-                                        img['src'] = f"{absolute_path}"
-                                        self.logger.info(f"Updated src to target directory path: {img['src']}")
-                                except Exception as e:
-                                    self.logger.error(f"Error constructing image path: {e}", exc_info=True)
-                                    # Fallback to using the target directory
-                                    absolute_path = os.path.join(str(self.target_dir), src)
-                                    img['src'] = f"{absolute_path}"
-                            else:
-                                # Fallback to current working directory if no target_dir is provided
-                                base_dir = os.getcwd()
-                                absolute_path = os.path.join(base_dir, src)
-                                img['src'] = f"{absolute_path}"
-                                self.logger.info(f"Updated src to absolute path: {img['src']}")
-                
-                # Retain style attribute if not Confluence-specific
-                if 'style' in img.attrs and 'confluence' in img['style']:
-                    del img['style']
+                             self.logger.debug(f"Strategy 2/3: Resource folder pattern not found in path or no parent directory")
+
+                    # Strategy 4: Fallback - Check if original_src string *itself* is a valid absolute path (maybe set previously)
+                    if not image_path and potential_abs_path.is_file():
+                        image_path = potential_abs_path
+                        self.logger.debug(f"Strategy 4 (fallback): Treating original src as absolute path: {image_path}")
+
+
+                # --- Start Base64 Embedding ---
+                if image_path and image_path.is_file():
+                    try:
+                        self.logger.debug(f"Image found! Attempting to embed image from: {image_path}")
+                        with open(image_path, "rb") as image_file:
+                            image_data = image_file.read()
+
+                        # Guess MIME type based on file extension
+                        mime_type, _ = guess_type(image_path)
+                        if mime_type is None:
+                            mime_type = "application/octet-stream" # Default if unknown
+                        self.logger.debug(f"Determined MIME type: {mime_type} for {image_path.name}")
+
+                        # Encode image data in Base64
+                        base64_data = base64.b64encode(image_data).decode('utf-8')
+                        # Create the data URI
+                        img['src'] = f"data:{mime_type};base64,{base64_data}"
+                        self.logger.info(f"Successfully embedded image {image_path.name} using Base64")
+
+                    except FileNotFoundError:
+                        self.logger.warning(f"Image file not found during embedding attempt: {image_path}. Removing img tag.")
+                        img.decompose()
+                        continue
+                    except Exception as e:
+                        self.logger.error(f"Error reading or embedding image {image_path}: {e}. Removing img tag.", exc_info=True)
+                        img.decompose()
+                        continue
+                else:
+                    # Handle cases where src is a URL or file doesn't exist/couldn't be resolved
+                    if original_src.startswith(('http://', 'https://')):
+                         self.logger.warning(f"Keeping external image URL: {original_src}. Google Drive might not fetch it.")
+                         # Optionally: Try to download and embed? Adds complexity. For now, keep URL.
+                         pass # Keep the original src
+                    elif original_src.startswith('data:'):
+                         # Already Base64 encoded, leave it alone
+                         self.logger.info("Image already has data URI src. Skipping.")
+                         pass # Keep the original src
+                    else:
+                        self.logger.warning(f"Local image path could not be resolved: '{original_src}'. Tried multiple strategies but failed to find the file. Removing img tag.")
+                        img.decompose()
+                        continue
+                # --- End Base64 Embedding ---
+
+                # Keep only essential attributes after processing src
+                # Ensure 'src' is preserved if it was successfully updated or kept
+                if img.has_attr('src'):
+                    allowed_attrs = {'src', 'alt', 'title', 'width', 'height', 'style'}
+                    current_attrs = set(img.attrs.keys())
+
+                    # Remove unwanted attributes
+                    for attr in current_attrs - allowed_attrs:
+                        # Keep style attribute if it's not explicitly confluence related
+                        if attr == 'style' and 'confluence' not in img.attrs.get('style', ''):
+                            self.logger.debug(f"Keeping non-confluence style attribute for image: {img.attrs['style']}")
+                            continue
+                        # Check if attribute still exists before deleting (might have been removed if tag decomposed)
+                        if img.has_attr(attr):
+                             self.logger.debug(f"Removing attribute '{attr}' from image tag.")
+                             del img[attr]
+
+                    # Ensure alt attribute exists if tag still exists
+                    if not img.has_attr('alt'):
+                         # Use filename stem if available, otherwise generic text
+                         alt_text = image_path.stem if image_path and image_path.is_file() else 'Embedded Image'
+                         img['alt'] = alt_text
+                         self.logger.debug(f"Added missing alt attribute: '{alt_text}'")
 
             except Exception as e:
-                self.logger.error(f"Error processing image: {e}", exc_info=True)
-        # Debug HTML
-        #print(self.soup.prettify())
+                self.logger.error(f"General error processing image tag with original src '{original_src}': {e}", exc_info=True)
+                # Ensure tag is removed if any error occurs
+                if img and img.parent: # Check if tag still exists and has a parent
+                    img.decompose()
 
     def _process_links(self) -> None:
         """Clean and process link elements."""
@@ -786,10 +855,7 @@ class HTMLCleaner:
         confluence_selectors = [
             '[data-macro-name]',
             '.confluence-information-macro',
-            '.expand-container',
             '.confluence-embedded-file-wrapper',
-            '.contentLayout2',
-            '.columnLayout',
             '.hidden-section',
             '.toc-macro',
         ]
@@ -797,108 +863,95 @@ class HTMLCleaner:
         for selector in confluence_selectors:
             for element in self.soup.select(selector):
                 # Instead of unwrapping, decompose the TOC completely
-                if 'toc-macro' in element.get('class', []):
-                    element.decompose()
+                if element.name == 'div' and 'toc-macro' in element.get('class', []):
+                     self.logger.info("Decomposing TOC macro.")
+                     element.decompose()
+                # Don't unwrap elements we process separately
+                elif element.name == 'div' and ('expand-container' in element.get('class', []) or \
+                                              'contentLayout2' in element.get('class', []) or \
+                                              'columnLayout' in element.get('class', [])):
+                    self.logger.debug(f"Skipping unwrap for element processed separately: {element.name}.{'.'.join(element.get('class',[]))}")
+                    pass
                 else:
+                    # Unwrap other matched elements
+                    self.logger.debug(f"Unwrapping element matched by selector '{selector}': {element.name}")
                     element.unwrap()
 
-        # Remove Confluence-specific styles and scripts
+
+        # Remove Confluence-specific styles and scripts that might remain
         for style_tag in self.soup.find_all('style'):
-            if 'confluence' in style_tag.get_text():
-                style_tag.decompose()
+            # More robust check for Confluence-specific styles
+            style_content = style_tag.get_text()
+            if 'confluence' in style_content or 'aui-' in style_content or '.wiki-content' in style_content:
+                 self.logger.debug(f"Decomposing Confluence style tag.")
+                 style_tag.decompose()
         for script_tag in self.soup.find_all('script'):
-            if 'confluence' in script_tag.get_text():
+             script_content = script_tag.get_text()
+             if 'confluence' in script_content or 'AJS' in script_content or 'WRM' in script_content:
+                self.logger.debug(f"Decomposing Confluence script tag.")
                 script_tag.decompose()
 
     def _convert_column_layouts(self) -> None:
         """
-        Convert Confluence column layouts into HTML tables.
+        Convert Confluence column layouts into divs with appropriate width classes.
         """
-        # Define the list of layout types
-        layout_types = ['two-equal', 'two-right-sidebar', 'two-left-sidebar', 'three-equal', 'three-with-sidebars']
+        # Find column layout sections
+        for layout_section in self.soup.select('div.columnLayout'):
+            cells = layout_section.find_all('div', class_='cell', recursive=False)
+            num_cells = len(cells)
 
-        # Build a selector that matches divs with class 'columnLayout' and any of the layout types
-        layout_selectors = [f"div.columnLayout.{layout}" for layout in layout_types]
+            if num_cells == 0:
+                layout_section.unwrap() # Remove empty layout wrapper
+                continue
 
-        # Mapping of width percentages to class names
-        width_class_mapping = {
-            '25%': 'column-25',
-            '33%': 'column-33',
-            '50%': 'column-50',
-            '67%': 'column-67',
-            '75%': 'column-75',
-            '100%': 'column-100',
-        }
+            # Determine column widths based on classes or number of cells
+            width_classes = []
+            layout_type = None
+            possible_layouts = ['two-equal', 'two-left-sidebar', 'two-right-sidebar', 'three-equal', 'three-with-sidebars']
+            for cls in layout_section.get('class', []):
+                if cls in possible_layouts:
+                    layout_type = cls
+                    break
 
-        # Find all matching divs
-        for selector in layout_selectors:
-            for layout_div in self.soup.select(selector):
-                try:
-                    # Get the layout type from the class or data-layout attribute
-                    layout_type = layout_div.get('data-layout', None)
-                    if not layout_type:
-                        # If data-layout is not set, try to extract from class
-                        layout_classes = layout_div.get('class', [])
-                        for cls in layout_classes:
-                            if cls in layout_types:
-                                layout_type = cls
-                                break
+            if layout_type == 'two-equal':
+                width_classes = ['column-50', 'column-50']
+            elif layout_type == 'two-left-sidebar': # Wider left column
+                 width_classes = ['column-67', 'column-33'] # Example widths, adjust as needed
+            elif layout_type == 'two-right-sidebar': # Wider right column
+                 width_classes = ['column-33', 'column-67'] # Example widths
+            elif layout_type == 'three-equal':
+                 width_classes = ['column-33', 'column-33', 'column-33']
+            elif layout_type == 'three-with-sidebars':
+                 width_classes = ['column-25', 'column-50', 'column-25']
+            else:
+                 # Default if layout type class is missing or unknown - distribute equally
+                 if num_cells == 2: width_classes = ['column-50', 'column-50']
+                 elif num_cells == 3: width_classes = ['column-33', 'column-33', 'column-33']
+                 else: width_classes = ['column-100'] # Fallback for single or > 3 cells
 
-                    if not layout_type:
-                        continue  # Skip if layout type is not identified
+            # Ensure width_classes list matches num_cells
+            if len(width_classes) != num_cells:
+                 self.logger.warning(f"Column count ({num_cells}) mismatch with inferred layout '{layout_type}'. Defaulting to equal widths.")
+                 if num_cells == 2: width_classes = ['column-50', 'column-50']
+                 elif num_cells == 3: width_classes = ['column-33', 'column-33', 'column-33']
+                 else: width_classes = ['column-100'] * num_cells # Distribute as best we can
 
-                    # Get the cells
-                    cells = layout_div.find_all('div', class_='cell', recursive=False)
-                    num_cells = len(cells)
 
-                    # Determine column widths based on layout type
-                    if layout_type == 'two-equal':
-                        col_widths = ['50%', '50%']
-                    elif layout_type == 'two-right-sidebar':
-                        col_widths = ['33%', '67%']
-                    elif layout_type == 'two-left-sidebar':
-                        col_widths = ['67%', '33%']
-                    elif layout_type == 'three-equal':
-                        col_widths = ['33%', '33%', '33%']
-                    elif layout_type == 'three-with-sidebars':
-                        col_widths = ['25%', '50%', '25%']
-                    else:
-                        # Default widths
-                        col_widths = ['100%'] * num_cells
+            # Create a new container div to replace the columnLayout section
+            container_div = self.soup.new_tag('div', attrs={'class': 'column-container'})
 
-                    # Create the table
-                    table = self.soup.new_tag('table')
-                    table_row = self.soup.new_tag('tr')
-                    table.append(table_row)
+            for i, cell in enumerate(cells):
+                # Create a new div for this column
+                column_div = self.soup.new_tag('div')
+                # Apply the calculated width class
+                column_div['class'] = width_classes[i]
+                # Move the content from the original cell div to the new column div
+                column_div.extend(cell.contents)
+                container_div.append(column_div)
 
-                    # Populate the table cells
-                    for idx, cell_div in enumerate(cells):
-                        # Create table cell
-                        td = self.soup.new_tag('td')
+            # Replace the original layout section with the new container div
+            layout_section.replace_with(container_div)
 
-                        # Assign width class
-                        width_class = width_class_mapping.get(col_widths[idx], '')
-                        if width_class:
-                            td['class'] = [width_class]
-
-                        # Move the content from the cell's innerCell div
-                        inner_cell = cell_div.find('div', class_='innerCell')
-                        if inner_cell:
-                            inner_contents = inner_cell.contents[:]
-                            for content in inner_contents:
-                                td.append(content)
-                        else:
-                            cell_contents = cell_div.contents[:]
-                            for content in cell_contents:
-                                td.append(content)
-
-                        table_row.append(td)
-
-                    # Replace the original layout div with the table
-                    layout_div.replace_with(table)
-
-                except Exception as e:
-                    self.logger.error(f"Error converting column layout: {e}", exc_info=True)
 
     def _process_status_macros(self) -> None:
         """Process Confluence status macros and convert them to styled text."""
@@ -943,14 +996,31 @@ class HTMLCleaner:
     
     def _unwrap_table_wrappers(self) -> None:
         """Unwrap tables from div.table-wrap elements."""
-        for wrapper in self.soup.find_all('div', class_='table-wrap'):
-            # Replace the wrapper div with its table content
-            table = wrapper.find('table')
-            if table:
-                wrapper.replace_with(table)
+        for wrapper in self.soup.find_all('div', class_='table-wrapper'):
+            # Find direct table children
+            direct_tables = wrapper.find_all('table', recursive=False)
+            # Check if the wrapper contains only whitespace and the table(s)
+            is_simple_wrapper = True
+            for child in wrapper.contents:
+                if isinstance(child, Tag) and child.name == 'table':
+                    continue # Skip tables
+                if isinstance(child, str) and child.strip() == '':
+                    continue # Skip whitespace
+                # Found something else
+                is_simple_wrapper = False
+                break
+
+            if direct_tables and is_simple_wrapper:
+                 self.logger.debug(f"Unwrapping simple table wrapper div.")
+                 wrapper.unwrap()
             else:
-                # If no table found, unwrap the div
-                wrapper.unwrap()
+                 self.logger.debug(f"Keeping table wrapper div as it contains other elements.")
+                 # Optional: remove the 'table-wrapper' class if keeping the div
+                 if 'class' in wrapper.attrs:
+                      wrapper['class'] = [c for c in wrapper['class'] if c != 'table-wrapper']
+                      if not wrapper['class']:
+                           del wrapper['class']
+
 
     def _process_expand_containers(self) -> None:
         """Process Confluence expand macros and convert them to styled containers."""
