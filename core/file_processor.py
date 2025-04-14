@@ -112,6 +112,22 @@ class FileProcessor:
 
         Returns:
             int: Total number of HTML files found
+            
+        Schema:
+        ```json
+        {
+            "name": "_count_input_files",
+            "description": "Count HTML files in input directory",
+            "input": {},
+            "output": {
+                "type": "integer",
+                "description": "Number of HTML files found"
+            },
+            "side_effects": [
+                {"target": "self.stats", "property": "total_input_files", "action": "update"}
+            ]
+        }
+        ```
         """
         count = sum(1 for _ in self.input_dir.rglob("*.html"))
         self.stats['total_input_files'] = count
@@ -127,6 +143,23 @@ class FileProcessor:
         Raises:
             FileNotFoundError: If input directory doesn't exist
             ValueError: If directory paths are invalid
+            
+        Schema:
+        ```json
+        {
+            "name": "_validate_directories",
+            "description": "Validate input/output directory paths",
+            "input": {},
+            "output": null,
+            "side_effects": [
+                {"target": "self.output_dir", "action": "create_if_missing"}
+            ],
+            "exceptions": [
+                {"type": "FileNotFoundError", "condition": "Input directory not found"},
+                {"type": "ValueError", "condition": "Input path is not a directory"}
+            ]
+        }
+        ```
         """
         if not self.input_dir.exists():
             raise FileNotFoundError(f"Input directory not found: {self.input_dir}")
@@ -148,6 +181,30 @@ class FileProcessor:
         Raises:
             FileNotFoundError: If no HTML files are found
             ValueError: If no valid breadcrumbs or title are found
+            
+        Schema:
+        ```json
+        {
+            "name": "setup_directory_structure",
+            "description": "Set up output directory structure based on breadcrumbs",
+            "input": {},
+            "output": {
+                "type": "array",
+                "items": [
+                    {"type": "string", "format": "path", "description": "New base directory path"},
+                    {"type": "string", "description": "Space name"}
+                ]
+            },
+            "side_effects": [
+                {"target": "filesystem", "action": "create_directory", "description": "Creates space directory"},
+                {"target": "filesystem", "action": "copy", "description": "Copies resource folders"}
+            ],
+            "exceptions": [
+                {"type": "FileNotFoundError", "condition": "No HTML files found"},
+                {"type": "ValueError", "condition": "No valid breadcrumbs or title found"}
+            ]
+        }
+        ```
         """
         # Find first HTML file
         html_files = list(self.input_dir.glob("*.html"))
@@ -192,6 +249,32 @@ class FileProcessor:
 
         Returns:
             Dict[str, Any]: Processing statistics and results
+            
+        Schema:
+        ```json
+        {
+            "name": "process_files",
+            "description": "Process all HTML files in input directory",
+            "input": {},
+            "output": {
+                "type": "object",
+                "properties": {
+                    "total_input_files": {"type": "integer", "description": "Number of HTML files found"},
+                    "processed_files": {"type": "integer", "description": "Number of successfully processed files"},
+                    "failed_files": {"type": "integer", "description": "Number of files that failed processing"},
+                    "created_docx": {"type": "integer", "description": "Number of DOCX files created"},
+                    "errors": {"type": "array", "items": {"type": "string"}, "description": "List of error messages"},
+                    "files_not_processed": {"type": "integer", "description": "Files that weren't processed"}
+                }
+            },
+            "side_effects": [
+                {"target": "filesystem", "action": "create_files", "description": "Creates processed files"}
+            ],
+            "exceptions": [
+                {"type": "Exception", "condition": "Processing failure", "handling": "logged and re-raised"}
+            ]
+        }
+        ```
         """
         try:
             # Count total input files first
@@ -227,7 +310,33 @@ class FileProcessor:
             raise
 
     def _process_html_files(self, base_dir: Path, space_name: str) -> None:
-        """Process all HTML files in the input directory."""
+        """
+        Process all HTML files in the input directory.
+        
+        Args:
+            base_dir (Path): Base output directory
+            space_name (str): Name of the space
+            
+        Schema:
+        ```json
+        {
+            "name": "_process_html_files",
+            "description": "Process all HTML files in input directory",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "base_dir": {"type": "string", "format": "path", "description": "Base output directory"},
+                    "space_name": {"type": "string", "description": "Space name for organization"}
+                },
+                "required": ["base_dir", "space_name"]
+            },
+            "output": null,
+            "side_effects": [
+                {"target": "self.stats", "action": "update", "properties": ["processed_files", "failed_files", "errors"]}
+            ]
+        }
+        ```
+        """
         for html_file in self.input_dir.rglob("*.html"):
             try:
                 success, result = self._process_html_file(html_file, base_dir, space_name)
@@ -262,6 +371,38 @@ class FileProcessor:
 
         Returns:
             Tuple[bool, str]: (Success status, Result message)
+            
+        Schema:
+        ```json
+        {
+            "name": "_process_html_file",
+            "description": "Process a single HTML file",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "file_path": {"type": "string", "format": "path", "description": "Path to HTML file"},
+                    "new_base_dir": {"type": "string", "format": "path", "description": "Base output directory"},
+                    "space_name": {"type": "string", "description": "Space name for organization"}
+                },
+                "required": ["file_path", "new_base_dir", "space_name"]
+            },
+            "output": {
+                "type": "array",
+                "items": [
+                    {"type": "boolean", "description": "Success flag"},
+                    {"type": "string", "description": "Result message or error"}
+                ]
+            },
+            "side_effects": [
+                {"target": "filesystem", "action": "create_file", "description": "Creates HTML file"},
+                {"target": "filesystem", "action": "create_file", "description": "Creates DOCX file if enabled"},
+                {"target": "self.stats", "property": "created_docx", "action": "increment", "condition": "create_docx enabled"}
+            ],
+            "exceptions": [
+                {"type": "Exception", "handling": "Caught, logged, and returned as error message"}
+            ]
+        }
+        ```
         """
         try:
             # Read and parse HTML
@@ -299,17 +440,111 @@ class FileProcessor:
             return False, str(e)
 
     def _read_html_file(self, file_path: Path) -> BeautifulSoup:
-        """Read and parse HTML file."""
+        """
+        Read and parse HTML file.
+        
+        Args:
+            file_path (Path): Path to HTML file
+            
+        Returns:
+            BeautifulSoup: Parsed HTML content
+            
+        Schema:
+        ```json
+        {
+            "name": "_read_html_file",
+            "description": "Read and parse HTML file",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "file_path": {"type": "string", "format": "path", "description": "Path to HTML file"}
+                },
+                "required": ["file_path"]
+            },
+            "output": {
+                "type": "object", 
+                "description": "BeautifulSoup object containing parsed HTML"
+            },
+            "exceptions": [
+                {"type": "FileNotFoundError", "condition": "File doesn't exist"},
+                {"type": "IOError", "condition": "File can't be read"}
+            ]
+        }
+        ```
+        """
         with file_path.open('r', encoding='utf-8') as f:
             return BeautifulSoup(f.read(), 'lxml')
 
     def _save_html_file(self, file_path: Path, content: str) -> None:
-        """Save HTML content to file."""
+        """
+        Save HTML content to file.
+        
+        Args:
+            file_path (Path): Path where HTML will be saved
+            content (str): HTML content to save
+            
+        Schema:
+        ```json
+        {
+            "name": "_save_html_file",
+            "description": "Save HTML content to file",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "file_path": {"type": "string", "format": "path", "description": "Output path for HTML file"},
+                    "content": {"type": "string", "description": "HTML content to save"}
+                },
+                "required": ["file_path", "content"]
+            },
+            "output": null,
+            "side_effects": [
+                {"target": "filesystem", "action": "write_file", "path": "file_path"}
+            ],
+            "exceptions": [
+                {"type": "IOError", "condition": "File can't be written"},
+                {"type": "PermissionError", "condition": "No permission to write file"}
+            ]
+        }
+        ```
+        """
         with file_path.open('w', encoding='utf-8') as f:
             f.write(content)
 
     def _extract_breadcrumbs(self, soup: BeautifulSoup) -> List[str]:
-        """Extract and sanitize breadcrumbs from HTML."""
+        """
+        Extract and sanitize breadcrumbs from HTML.
+        
+        Args:
+            soup (BeautifulSoup): Parsed HTML content
+            
+        Returns:
+            List[str]: List of sanitized breadcrumb strings
+            
+        Schema:
+        ```json
+        {
+            "name": "_extract_breadcrumbs",
+            "description": "Extract and sanitize breadcrumbs from HTML",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "soup": {"type": "object", "description": "BeautifulSoup object containing parsed HTML"}
+                },
+                "required": ["soup"]
+            },
+            "output": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "List of sanitized breadcrumb strings"
+            },
+            "processing": {
+                "extraction": "Finds breadcrumb section and extracts text from links",
+                "sanitization": "Calls _sanitize_filename on each breadcrumb text",
+                "empty_result": "Returns empty list if no breadcrumbs found"
+            }
+        }
+        ```
+        """
         breadcrumbs = []
         breadcrumb_section = soup.find('div', id='breadcrumb-section')
         
@@ -324,7 +559,40 @@ class FileProcessor:
         return breadcrumbs
 
     def _sanitize_filename(self, filename: str) -> str:
-        """Sanitize string for use as filename."""
+        """
+        Sanitize string for use as filename.
+        
+        Args:
+            filename (str): Original string to sanitize
+            
+        Returns:
+            str: Sanitized filename
+            
+        Schema:
+        ```json
+        {
+            "name": "_sanitize_filename",
+            "description": "Sanitize string for use as filename",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "Original string to sanitize"}
+                },
+                "required": ["filename"]
+            },
+            "output": {
+                "type": "string",
+                "description": "Sanitized filename"
+            },
+            "transformation": {
+                "invalid_chars_removed": "Removes characters <>:\"/\\|?*",
+                "whitespace_replaced": "Replaces spaces with hyphens",
+                "trimmed": "Removes leading/trailing hyphens",
+                "default": "Returns 'untitled' if input is empty or result is empty"
+            }
+        }
+        ```
+        """
         if not filename:
             return "untitled"
             
@@ -338,7 +606,44 @@ class FileProcessor:
         return cleaned or "untitled"
 
     def _get_safe_filename(self, soup: BeautifulSoup, file_path: Path, space_name: str) -> str:
-        """Generate safe filename from HTML title or filepath."""
+        """
+        Generate safe filename from HTML title or filepath.
+        
+        Args:
+            soup (BeautifulSoup): Parsed HTML content
+            file_path (Path): Original file path
+            space_name (str): Space name to remove from filename
+            
+        Returns:
+            str: Safe filename with .html extension
+            
+        Schema:
+        ```json
+        {
+            "name": "_get_safe_filename",
+            "description": "Generate safe filename from HTML title or filepath",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "soup": {"type": "object", "description": "BeautifulSoup object containing parsed HTML"},
+                    "file_path": {"type": "string", "format": "path", "description": "Original file path"},
+                    "space_name": {"type": "string", "description": "Space name to remove from filename"}
+                },
+                "required": ["soup", "file_path", "space_name"]
+            },
+            "output": {
+                "type": "string",
+                "description": "Safe filename with .html extension"
+            },
+            "algorithm": {
+                "primary_source": "HTML title tag if available",
+                "fallback": "Original file's stem name",
+                "processing": "Remove space name prefix if present",
+                "extension": "Adds .html extension"
+            }
+        }
+        ```
+        """
         title_tag = soup.find('title')
         if title_tag and title_tag.string:
             filename = self._sanitize_filename(title_tag.string.strip())
@@ -351,7 +656,44 @@ class FileProcessor:
         return f"{filename}.html"
 
     def _create_directory_path(self, base_path: Path, breadcrumbs: List[str]) -> Path:
-        """Create nested directory structure from breadcrumbs."""
+        """
+        Create nested directory structure from breadcrumbs.
+        
+        Args:
+            base_path (Path): Base directory path
+            breadcrumbs (List[str]): List of breadcrumb segments
+            
+        Returns:
+            Path: Created directory path
+            
+        Schema:
+        ```json
+        {
+            "name": "_create_directory_path",
+            "description": "Create nested directory structure from breadcrumbs",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "base_path": {"type": "string", "format": "path", "description": "Base directory path"},
+                    "breadcrumbs": {
+                        "type": "array", 
+                        "items": {"type": "string"},
+                        "description": "List of breadcrumb segments"
+                    }
+                },
+                "required": ["base_path", "breadcrumbs"]
+            },
+            "output": {
+                "type": "string",
+                "format": "path",
+                "description": "Path to created directory structure"
+            },
+            "side_effects": [
+                {"target": "filesystem", "action": "create_directories", "description": "Creates directory hierarchy"}
+            ]
+        }
+        ```
+        """
         current_path = base_path
         for crumb in breadcrumbs:
             current_path = current_path / crumb
@@ -359,7 +701,36 @@ class FileProcessor:
         return current_path
 
     def _copy_resource_folders(self, new_base_dir: Path) -> None:
-        """Copy resource folders to output directory."""
+        """
+        Copy resource folders to output directory.
+        
+        Args:
+            new_base_dir (Path): Base output directory
+            
+        Schema:
+        ```json
+        {
+            "name": "_copy_resource_folders",
+            "description": "Copy resource folders to output directory",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "new_base_dir": {"type": "string", "format": "path", "description": "Base output directory"}
+                },
+                "required": ["new_base_dir"]
+            },
+            "output": null,
+            "side_effects": [
+                {"target": "filesystem", "action": "copy_directories", "description": "Copies resource folders to output directory"}
+            ],
+            "resource_folders": ["attachments", "images", "styles", "img"],
+            "behavior": {
+                "only_existing": "Only copies folders that exist in input directory",
+                "preserves_structure": "Maintains folder structure in destination"
+            }
+        }
+        ```
+        """
         for folder in self.RESOURCE_FOLDERS:
             source_folder = self.input_dir / folder
             if source_folder.exists():
@@ -368,13 +739,73 @@ class FileProcessor:
                 self.logger.debug(f"Copied resource folder: {folder}")
 
     def _convert_to_docx(self, html_path: Path, target_dir: Path) -> None:
-        """Convert HTML file to DOCX format."""
+        """
+        Convert HTML file to DOCX format.
+        
+        Args:
+            html_path (Path): Path to HTML file
+            target_dir (Path): Directory where DOCX will be saved
+            
+        Schema:
+        ```json
+        {
+            "name": "_convert_to_docx",
+            "description": "Convert HTML file to DOCX format",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "html_path": {"type": "string", "format": "path", "description": "Path to HTML file"},
+                    "target_dir": {"type": "string", "format": "path", "description": "Directory for DOCX output"}
+                },
+                "required": ["html_path", "target_dir"]
+            },
+            "output": null,
+            "side_effects": [
+                {"target": "filesystem", "action": "create_file", "description": "Creates DOCX file with same name as HTML"}
+            ],
+            "dependencies": {
+                "library": "HtmlToDocx",
+                "file_naming": "Uses original HTML filename with .docx extension"
+            }
+        }
+        ```
+        """
         docx_path = target_dir / f"{html_path.stem}.docx"
         converter = HtmlToDocx()
         converter.parse_html_file(str(html_path), str(docx_path))
 
     def _organize_duplicates(self, base_dir: Path) -> None:
-        """Organize files that have the same name as their parent folders."""
+        """
+        Organize files that have the same name as their parent folders.
+        
+        Args:
+            base_dir (Path): Base directory to organize
+            
+        Schema:
+        ```json
+        {
+            "name": "_organize_duplicates",
+            "description": "Organize files that have the same name as their parent folders",
+            "input": {
+                "type": "object",
+                "properties": {
+                    "base_dir": {"type": "string", "format": "path", "description": "Base directory to organize"}
+                },
+                "required": ["base_dir"]
+            },
+            "output": null,
+            "side_effects": [
+                {"target": "filesystem", "action": "move_files", "description": "Moves files into subdirectories"}
+            ],
+            "supported_extensions": [".html", ".docx"],
+            "algorithm": {
+                "detection": "Finds files with name matching parent directory",
+                "action": "Moves file into the matching directory",
+                "error_handling": "Logs errors for files that can't be moved"
+            }
+        }
+        ```
+        """
         for extension in self.SUPPORTED_EXTENSIONS:
             for file_path in base_dir.rglob(f"*{extension}"):
                 try:
@@ -387,7 +818,25 @@ class FileProcessor:
                     self.logger.error(f"Error organizing {file_path}: {e}")
 
     def _log_processing_stats(self) -> None:
-        """Collect final processing statistics."""
+        """
+        Collect final processing statistics.
+        
+        Schema:
+        ```json
+        {
+            "name": "_log_processing_stats",
+            "description": "Collect final processing statistics",
+            "input": {},
+            "output": null,
+            "side_effects": [
+                {"target": "self.stats", "action": "update", "property": "files_not_processed"}
+            ],
+            "calculation": {
+                "files_not_processed": "total_input_files - (processed_files + failed_files)"
+            }
+        }
+        ```
+        """
         # Remove the logging statements and just update the stats dictionary
         self.stats.update({
             'files_not_processed': self.stats['total_input_files'] - (
