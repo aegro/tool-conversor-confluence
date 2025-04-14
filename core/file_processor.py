@@ -595,14 +595,36 @@ class FileProcessor:
         """
         if not filename:
             return "untitled"
-            
-        # Remove invalid characters
-        cleaned = re.sub(r'[<>:"/\\|?*]', '', filename)
-        # Replace whitespace with hyphens
-        cleaned = re.sub(r'\s+', '-', cleaned)
-        # Remove leading/trailing hyphens
-        cleaned = cleaned.strip('-')
         
+        # Get filename configuration settings
+        filename_settings = self.config.get('filename_settings', {})
+        preserve_spaces = filename_settings.get('preserve_spaces', False)
+        replace_character = filename_settings.get('replace_character', '-')
+        sanitize_characters = filename_settings.get('sanitize_characters', True)
+        url_safe_filenames = filename_settings.get('url_safe_filenames', True)
+        
+        # Apply sanitization based on settings
+        cleaned = filename
+        
+        # Remove invalid file system characters if sanitization is enabled
+        if sanitize_characters:
+            cleaned = re.sub(r'[<>:"/\\|?*]', '', cleaned)
+        
+        # Handle spaces based on configuration
+        if not preserve_spaces:
+            # Replace whitespace with the configured replacement character
+            cleaned = re.sub(r'\s+', replace_character, cleaned)
+        
+        # Ensure URL safe filenames if enabled
+        if url_safe_filenames:
+            # Additional URL-unsafe character removal can be added here if needed
+            pass
+        
+        # Always trim leading/trailing hyphens or replacement characters
+        if not preserve_spaces:
+            cleaned = cleaned.strip(replace_character)
+        
+        # Ensure we have a valid filename, even after all processing
         return cleaned or "untitled"
 
     def _get_safe_filename(self, soup: BeautifulSoup, file_path: Path, space_name: str) -> str:

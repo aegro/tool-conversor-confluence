@@ -22,6 +22,13 @@ image_settings:
   border_width: '1px'
   allowed_attrs: ['src', 'alt', 'width', 'height', 'title', 'style']
 
+# Filename processing settings
+filename_settings:
+  preserve_spaces: true    # If true, spaces in filenames will be preserved; if false, spaces will be converted to hyphens
+  replace_character: '-'   # Character to use when replacing spaces (if preserve_spaces is false)
+  sanitize_characters: true  # Remove special characters from filenames for better compatibility
+  url_safe_filenames: true   # Ensure filenames are URL-safe by removing problematic characters
+
 http_settings:
   timeout: 30
   max_retries: 3
