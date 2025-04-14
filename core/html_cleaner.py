@@ -408,6 +408,184 @@ class HTMLCleaner:
                 color: #00c65e;
                 margin-bottom: 0.5em;
             }
+
+            /* New styles for the additional cleaning elements */
+
+            /* Task List Styles */
+            .task-list {
+                list-style-type: none;
+                margin-left: 0;
+                padding-left: 0;
+            }
+
+            .task-list-item {
+                list-style-type: none;
+                position: relative;
+                padding-left: 30px;
+                margin-bottom: 8px;
+            }
+
+            .task-list-item input[type="checkbox"] {
+                position: absolute;
+                left: 0;
+                top: 3px;
+                margin-right: 10px;
+                cursor: default;
+            }
+
+            /* External Link Styles */
+            .external-link {
+                color: #046062;
+                position: relative;
+                padding-right: 3px;
+            }
+
+            .external-link-icon {
+                font-size: 0.8em;
+                color: #00c65e;
+                vertical-align: super;
+            }
+
+            /* User Mention Styles */
+            .user-mention {
+                background-color: #e6f9ee;
+                border-radius: 3px;
+                padding: 1px 4px;
+                font-weight: 500;
+                color: #046062;
+            }
+
+            /* Highlighted Content Styles */
+            .highlighted-cell {
+                border-left: 3px solid #00c65e;
+            }
+
+            /* Formatted Date Styles */
+            .formatted-date {
+                color: #757575;
+                font-size: 0.9em;
+                font-style: italic;
+            }
+
+            /* Horizontal rule styling */
+            hr {
+                border: 0;
+                height: 1px;
+                background-color: #e0e0e0;
+                margin: 1.5em 0;
+            }
+
+            /* Message Box Styles */
+            .message-box {
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 4px;
+                border-left: 5px solid;
+            }
+            
+            .message-box-tip {
+                background-color: #e3fcef;
+                border-left-color: #00c65e;
+            }
+            
+            .message-box-warning {
+                background-color: #fff8e6;
+                border-left-color: #ffab00;
+            }
+            
+            .message-box-note {
+                background-color: #eee;
+                border-left-color: #7a869a;
+            }
+            
+            .message-box-info {
+                background-color: #deebff;
+                border-left-color: #0065ff;
+            }
+            
+            .message-box-error {
+                background-color: #ffebe6;
+                border-left-color: #ff5630;
+            }
+            
+            /* Panel Styles */
+            .custom-panel {
+                padding: 15px;
+                margin-bottom: 20px;
+                border-radius: 4px;
+                border: 1px solid;
+            }
+            
+            .panel-gray {
+                background-color: #f4f5f7;
+                border-color: #dfe1e6;
+            }
+            
+            .panel-green {
+                background-color: #e3fcef;
+                border-color: #00c65e;
+            }
+            
+            .panel-purple {
+                background-color: #eae6ff;
+                border-color: #998dd9;
+            }
+            
+            .panel-blue {
+                background-color: #deebff;
+                border-color: #0065ff;
+            }
+            
+            .panel-content {
+                color: #333;
+            }
+            
+            /* Table of Contents Styles */
+            .table-of-contents {
+                background-color: #f8f9fa;
+                border: 1px solid #eaecef;
+                border-radius: 4px;
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .table-of-contents h2 {
+                margin-top: 0;
+                font-size: 1.2em;
+                color: #046062;
+            }
+            
+            .table-of-contents ul {
+                margin-bottom: 0;
+            }
+            
+            /* Missing Page Styles */
+            .missing-page {
+                color: #c9302c;
+                font-style: italic;
+                text-decoration: line-through;
+            }
+            
+            /* Empty Document Note */
+            .empty-document-note {
+                color: #7a869a;
+                font-style: italic;
+                text-align: center;
+                padding: 30px;
+                border: 1px dashed #dfe1e6;
+                border-radius: 4px;
+            }
+            
+            /* Unknown Content Placeholder */
+            .unknown-content-placeholder {
+                display: inline-block;
+                padding: 3px 8px;
+                background-color: #f4f5f7;
+                border-radius: 3px;
+                color: #7a869a;
+                font-size: 0.9em;
+                font-style: italic;
+            }
         """
         # Find or create head element
         head = self.soup.head
@@ -446,6 +624,23 @@ class HTMLCleaner:
             self._process_decision_lists()
             self._process_code_blocks()
             self._convert_column_layouts()
+
+            # Additional processing methods
+            self._process_task_lists()
+            self._process_external_links()
+            self._process_user_mentions()
+            self._process_highlighted_content()
+            self._format_dates()
+            self._clean_empty_paragraphs()
+            
+            # New processing methods for additional patterns
+            self._remove_unknown_macros()
+            self._process_information_boxes()
+            self._process_panel_elements()
+            self._process_toc_macros()
+            self._process_create_links()
+            self._remove_attachments_section()
+            self._check_empty_document()
 
             # Unwrap table wrappers
             self._unwrap_table_wrappers()
@@ -579,20 +774,6 @@ class HTMLCleaner:
         for img in self.soup.find_all("img"):
             original_src = "N/A"
             try:
-                # Handle Confluence icons and bullets (remove them completely)
-                if img.get("src") and any(icon in img["src"] for icon in [
-                    "bullet_blue.gif", 
-                    "wait.gif", 
-                    "grey_arrow_down.png",
-                    # Add any other common icons/gifs to remove
-                    "check.png",
-                    "error.png", 
-                    "help_16.png",
-                ]):
-                    self.logger.info(f"Removing Confluence icon/bullet image: {img.get('src')}")
-                    img.decompose()
-                    continue
-                    
                 if "src" not in img.attrs or not img.attrs["src"]:
                     self.logger.warning(
                         "Image tag found without 'src' attribute. Removing tag."
@@ -1014,6 +1195,7 @@ class HTMLCleaner:
 
     def _process_emojis(self) -> None:
         """Convert Confluence emoji images to their Unicode equivalents."""
+        # Process emotion class emojis
         emoji_elements = self.soup.find_all("img", class_="emoticon")
 
         for emoji in emoji_elements:
@@ -1025,7 +1207,7 @@ class HTMLCleaner:
                 emoji_text = self.soup.new_string(emoji_fallback)
                 # Replace the img tag with the text node
                 emoji.replace_with(emoji_text)
-                self.logger.debug(f"Replaced emoji image with Unicode character: {emoji_fallback}")
+                self.logger.debug(f"Replaced emoticon with Unicode: {emoji_fallback}")
             else:
                 # If no fallback is available, try to use the shortname or just remove it
                 shortname = emoji.get("data-emoji-shortname")
@@ -1034,64 +1216,157 @@ class HTMLCleaner:
                     clean_shortname = shortname.strip(":")
                     emoji_text = self.soup.new_string(f":{clean_shortname}:")
                     emoji.replace_with(emoji_text)
+                    self.logger.debug(f"Replaced emoticon with shortname: :{clean_shortname}:")
                 else:
                     # If no viable alternative, remove the emoji
                     emoji.decompose()
-
-    def _remove_confluence_specific(self) -> None:
-        """Remove Confluence-specific elements and unwrap their content."""
-        # Remove Confluence macros and wrappers
-        confluence_selectors = [
-            "[data-macro-name]",
-            ".confluence-information-macro",
-            ".confluence-embedded-file-wrapper",
-            ".hidden-section",
-            ".toc-macro",
-        ]
-
-        for selector in confluence_selectors:
-            for element in self.soup.select(selector):
-                # Instead of unwrapping, decompose the TOC completely
-                if element.name == "div" and "toc-macro" in element.get("class", []):
-                    self.logger.info("Decomposing TOC macro.")
-                    element.decompose()
-                # Don't unwrap elements we process separately
-                elif element.name == "div" and (
-                    "expand-container" in element.get("class", [])
-                    or "contentLayout2" in element.get("class", [])
-                    or "columnLayout" in element.get("class", [])
-                ):
-                    self.logger.debug(
-                        f"Skipping unwrap for element processed separately: {element.name}.{'.'.join(element.get('class',[]))}"
-                    )
-                    pass
+                    self.logger.debug("Removed emoticon without fallback or shortname")
+        
+        # Process all img tags with src in /images/icons/emoticons/
+        emoticon_images = self.soup.find_all("img", src=lambda s: s and "/images/icons/emoticons/" in s)
+        
+        # Map of common emoticon filenames to Unicode equivalents
+        emoticon_map = {
+            "smile.png": "🙂",
+            "heart.png": "❤️",
+            "star_blue.png": "⭐",
+            "information.png": "ℹ️",
+            "lightbulb_on.png": "💡",
+            "warning.png": "⚠️",
+            "check.png": "✅",
+            "error.png": "❌",
+            "help_16.png": "❓",
+            "add.png": "➕",
+            "forbidden.png": "🚫",
+            "wink.png": "😉",
+            # Add more emoticons as needed
+        }
+        
+        for img in emoticon_images:
+            src = img.get("src", "")
+            # Extract filename from path
+            filename = src.split("/")[-1].split("?")[0]
+            
+            if filename in emoticon_map:
+                # Replace with Unicode
+                img.replace_with(self.soup.new_string(emoticon_map[filename]))
+                self.logger.debug(f"Replaced emoticon image {filename} with Unicode: {emoticon_map[filename]}")
+            else:
+                alt = img.get("alt", "")
+                if alt:
+                    img.replace_with(self.soup.new_string(alt))
+                    self.logger.debug(f"Replaced emoticon image {filename} with alt text: {alt}")
                 else:
-                    # Unwrap other matched elements
-                    self.logger.debug(
-                        f"Unwrapping element matched by selector '{selector}': {element.name}"
-                    )
-                    element.unwrap()
+                    # If no mapping found, remove it
+                    img.decompose()
+                    self.logger.debug(f"Removed unmapped emoticon image: {filename}")
+        
+        # Process Unicode emoji images (numbered PNG files in the 72 directory)
+        emoji_number_images = self.soup.find_all("img", src=lambda s: s and "/icons/emoticons/72/" in s)
+        
+        for img in emoji_number_images:
+            src = img.get("src", "")
+            # Extract the Unicode code point from the filename (e.g., "1f4c8.png" -> "1f4c8")
+            filename = src.split("/")[-1].split("?")[0]
+            code_point = filename.split(".")[0]
+            
+            try:
+                # Try to convert hex code point to Unicode character
+                # Some code points might be sequences like "1f1e6-1f1fd" for flag emojis
+                if "-" in code_point:
+                    parts = code_point.split("-")
+                    unicode_char = "".join(chr(int(part, 16)) for part in parts)
+                else:
+                    unicode_char = chr(int(code_point, 16))
+                
+                img.replace_with(self.soup.new_string(unicode_char))
+                self.logger.debug(f"Replaced Unicode emoji image {filename} with character: {unicode_char}")
+            except (ValueError, OverflowError) as e:
+                # If conversion fails, use alt text or remove
+                alt = img.get("alt", "")
+                if alt:
+                    img.replace_with(self.soup.new_string(alt))
+                    self.logger.debug(f"Replaced Unicode emoji image {filename} with alt text: {alt}")
+                else:
+                    img.decompose()
+                    self.logger.debug(f"Removed Unicode emoji image with invalid code point: {code_point}")
+        
+        # Process content type icons and remove specific files
+        self._process_content_type_icons()
+        self._remove_specific_images()
 
-        # Remove Confluence-specific styles and scripts that might remain
-        for style_tag in self.soup.find_all("style"):
-            # More robust check for Confluence-specific styles
-            style_content = style_tag.get_text()
-            if (
-                "confluence" in style_content
-                or "aui-" in style_content
-                or ".wiki-content" in style_content
-            ):
-                self.logger.debug(f"Decomposing Confluence style tag.")
-                style_tag.decompose()
-        for script_tag in self.soup.find_all("script"):
-            script_content = script_tag.get_text()
-            if (
-                "confluence" in script_content
-                or "AJS" in script_content
-                or "WRM" in script_content
-            ):
-                self.logger.debug(f"Decomposing Confluence script tag.")
-                script_tag.decompose()
+    def _process_content_type_icons(self) -> None:
+        """
+        Replace content type icons with appropriate Unicode symbols.
+        These are typically found in /images/icons/contenttypes/ directory.
+        """
+        # Content type mapping to Unicode equivalents
+        contenttype_map = {
+            "home_page_16.png": "🏠",  # Home icon
+            "page_white_16.png": "📄",  # Document
+            "page_white_code_16.png": "📝",  # Code document
+            "page_white_excel_16.png": "📊",  # Excel document
+            "page_white_word_16.png": "📃",  # Word document
+            "page_white_powerpoint_16.png": "📑",  # PowerPoint
+            "page_white_acrobat_16.png": "📕",  # PDF
+            "email_16.png": "📧",  # Email
+            "comment_16.png": "💬",  # Comment
+            "calendar_16.png": "📅",  # Calendar
+            "task_16.png": "✔️",  # Task
+            "attachment_16.png": "📎",  # Attachment
+            # Add more as needed
+        }
+        
+        # Find all content type icons
+        contenttype_images = self.soup.find_all("img", src=lambda s: s and "/images/icons/contenttypes/" in s)
+        
+        for img in contenttype_images:
+            src = img.get("src", "")
+            # Extract filename from path
+            filename = src.split("/")[-1].split("?")[0]
+            
+            if filename in contenttype_map:
+                # Replace with Unicode
+                img.replace_with(self.soup.new_string(contenttype_map[filename]))
+                self.logger.debug(f"Replaced content type icon {filename} with Unicode: {contenttype_map[filename]}")
+            else:
+                alt = img.get("alt", "")
+                if alt:
+                    img.replace_with(self.soup.new_string(alt))
+                    self.logger.debug(f"Replaced content type icon {filename} with alt text: {alt}")
+                else:
+                    # Default document icon if no specific mapping
+                    img.replace_with(self.soup.new_string("📄"))
+                    self.logger.debug(f"Replaced unmapped content type icon {filename} with default document icon")
+    
+    def _remove_specific_images(self) -> None:
+        """
+        Remove specific image references that are not needed in the cleaned output.
+        """
+        # List of specific image filenames to remove
+        files_to_remove = [
+            "bullet_blue.gif",
+            "grey_arrow_down.png",
+            "wait.gif"
+        ]
+        
+        # Find images with these filenames in their src
+        for img in self.soup.find_all("img", src=lambda s: s and any(f in s for f in files_to_remove)):
+            src = img.get("src", "")
+            filename = src.split("/")[-1].split("?")[0]
+            
+            # Check if we should process this image's parent
+            parent = img.parent
+            
+            # For bullet_blue.gif specifically, it's often used in attachment lists
+            if "bullet_blue.gif" in src and parent and parent.name == "img":
+                # Remove the whole parent element if it's just a list marker
+                parent.decompose()
+                self.logger.debug(f"Removed parent element containing bullet_blue.gif")
+            else:
+                # For other cases, just remove the image
+                img.decompose()
+                self.logger.debug(f"Removed specific image: {filename}")
 
     def _convert_column_layouts(self) -> None:
         """
@@ -1173,6 +1448,7 @@ class HTMLCleaner:
 
             # Replace the original layout section with the new container div
             layout_section.replace_with(container_div)
+            self.logger.debug(f"Converted column layout with {num_cells} cells")
 
     def _process_status_macros(self) -> None:
         """Process Confluence status macros and convert them to styled text."""
@@ -1360,3 +1636,367 @@ class HTMLCleaner:
 
             except Exception as e:
                 self.logger.error(f"Error processing code block: {e}", exc_info=True)
+
+    def _process_task_lists(self) -> None:
+        """
+        Convert Confluence task lists to standard HTML checklists with appropriate styling.
+        """
+        for task_item in self.soup.find_all("li", class_=["checked", "unchecked"]):
+            # Create a new list item
+            new_li = self.soup.new_tag("li")
+            new_li["class"] = ["task-list-item"]
+            
+            # Create checkbox
+            is_checked = "checked" in task_item.get("class", [])
+            checkbox = self.soup.new_tag("input", type="checkbox")
+            if is_checked:
+                checkbox["checked"] = "checked"
+            checkbox["disabled"] = "disabled"  # Make it readonly
+            
+            # Add checkbox to list item
+            new_li.append(checkbox)
+            
+            # Move content
+            for child in task_item.contents:
+                # Skip the placeholder span
+                if hasattr(child, "name") and child.name == "span" and "placeholder-inline-tasks" in child.get("class", []):
+                    # Extract actual content from placeholder
+                    for placeholder_child in child.contents:
+                        new_li.append(placeholder_child)
+                else:
+                    new_li.append(child)
+            
+            # Replace original item
+            task_item.replace_with(new_li)
+        
+        # Update parent lists if needed
+        for task_list in self.soup.find_all("ul", class_="inline-task-list"):
+            task_list["class"] = ["task-list"]
+    
+    def _process_external_links(self) -> None:
+        """
+        Standardize external links with appropriate styling and indicators.
+        """
+        for link in self.soup.find_all("a", class_="external-link"):
+            # Keep href and text content
+            if "class" in link.attrs:
+                link["class"] = ["external-link"]  # Replace any additional classes
+            
+            # Remove unwanted attributes
+            unwanted_attrs = ["rel", "data-card-appearance"]
+            for attr in unwanted_attrs:
+                if attr in link.attrs:
+                    del link[attr]
+            
+            # Add a small external link indicator if not already present
+            if not link.find("span", class_="external-link-icon"):
+                icon = self.soup.new_tag("span")
+                icon["class"] = ["external-link-icon"]
+                icon["aria-hidden"] = "true"
+                # Unicode external link symbol
+                icon.string = " ↗"
+                link.append(icon)
+    
+    def _process_user_mentions(self) -> None:
+        """
+        Process user mentions to standardized format.
+        """
+        for mention in self.soup.find_all("a", class_="user-mention"):
+            # Get user name
+            user_name = mention.get_text(strip=True)
+            
+            # Create a simple span for the mention
+            mention_span = self.soup.new_tag("span")
+            mention_span["class"] = ["user-mention"]
+            mention_span.string = f"@{user_name}"
+            
+            # Replace the original complex mention
+            mention.replace_with(mention_span)
+    
+    def _process_highlighted_content(self) -> None:
+        """
+        Process highlighted content with standardized styling.
+        """
+        # Process table cells with highlight color
+        for cell in self.soup.find_all(attrs={"data-highlight-colour": True}):
+            highlight_color = cell["data-highlight-colour"]
+            if "class" not in cell.attrs:
+                cell["class"] = []
+            cell["class"].append("highlighted-cell")
+            
+            # Set inline style for the highlight color
+            cell["style"] = f"background-color: {highlight_color};"
+            
+            # Remove the data attribute
+            del cell["data-highlight-colour"]
+    
+    def _format_dates(self) -> None:
+        """
+        Standardize date formatting in the document.
+        """
+        for time_tag in self.soup.find_all("time"):
+            if "datetime" in time_tag.attrs:
+                datetime_value = time_tag["datetime"]
+                
+                # Create a formatted date span
+                date_span = self.soup.new_tag("span")
+                date_span["class"] = ["formatted-date"]
+                date_span["data-datetime"] = datetime_value
+                
+                # Keep the original date text
+                date_span.string = time_tag.get_text(strip=True)
+                
+                # Replace the time tag
+                time_tag.replace_with(date_span)
+    
+    def _clean_empty_paragraphs(self) -> None:
+        """
+        Remove empty paragraph tags and standardize line breaks.
+        """
+        # Find and remove completely empty paragraphs
+        for p in self.soup.find_all("p"):
+            # Check if empty or only contains whitespace/line breaks
+            content = p.get_text(strip=True)
+            has_meaningful_child = False
+            
+            for child in p.children:
+                if child.name in ["img", "br"] or (hasattr(child, "name") and child.name is not None):
+                    has_meaningful_child = True
+                    break
+            
+            if not content and not has_meaningful_child:
+                p.decompose()
+                continue
+                
+            # If paragraph only contains a br tag, replace with a horizontal rule
+            if len(list(p.children)) == 1 and p.br:
+                # Check if it's just a solo <br/>
+                if p.decode_contents().strip() == "<br/>":
+                    hr = self.soup.new_tag("hr")
+                    p.replace_with(hr)
+
+    def _remove_unknown_macros(self) -> None:
+        """
+        Remove unknown Confluence macros that can't be rendered.
+        These typically appear as placeholder images in the exported HTML.
+        """
+        for macro in self.soup.find_all("img", class_="wysiwyg-unknown-macro"):
+            self.logger.info("Removing unknown macro placeholder.")
+            macro.decompose()
+    
+    def _process_information_boxes(self) -> None:
+        """
+        Process Confluence information boxes (tip, warning, note) and convert them to 
+        standardized message boxes with consistent styling.
+        """
+        # Find all information macros
+        for info_box in self.soup.find_all("div", class_=lambda c: c and "confluence-information-macro" in c):
+            try:
+                # Determine the type of information box
+                box_type = "info"  # Default type
+                for cls in info_box.get("class", []):
+                    if "confluence-information-macro-" in cls:
+                        box_type = cls.replace("confluence-information-macro-", "")
+                        break
+                
+                # Create a new standardized message box
+                new_box = self.soup.new_tag("div")
+                new_box["class"] = [f"message-box", f"message-box-{box_type}"]
+                
+                # Extract the content from the original box
+                content = info_box.find("div", class_="confluence-information-macro-body")
+                if content:
+                    # Create heading based on box type
+                    heading = self.soup.new_tag("strong")
+                    heading_text = box_type.capitalize()
+                    if box_type == "tip":
+                        heading_text = "Tip"
+                    elif box_type == "warning":
+                        heading_text = "Warning"
+                    elif box_type == "note":
+                        heading_text = "Note"
+                    elif box_type == "info":
+                        heading_text = "Info"
+                    elif box_type == "error":
+                        heading_text = "Error"
+                    
+                    heading.string = heading_text
+                    
+                    # Create a paragraph for the heading
+                    heading_p = self.soup.new_tag("p")
+                    heading_p.append(heading)
+                    new_box.append(heading_p)
+                    
+                    # Move the content
+                    for child in content.contents:
+                        new_box.append(child)
+                
+                # Replace the original box with the new one
+                info_box.replace_with(new_box)
+                self.logger.info(f"Processed information box of type: {box_type}")
+            except Exception as e:
+                self.logger.error(f"Error processing information box: {e}", exc_info=True)
+    
+    def _process_panel_elements(self) -> None:
+        """
+        Process Confluence panel elements and convert them to standardized panels
+        with consistent styling instead of inline styles.
+        """
+        for panel in self.soup.find_all("div", class_="panel"):
+            try:
+                # Extract background and border colors from style attribute if present
+                bg_color = None
+                border_color = None
+                
+                if "style" in panel.attrs:
+                    style = panel["style"]
+                    bg_match = re.search(r"background-color:\s*([^;]+);", style)
+                    if bg_match:
+                        bg_color = bg_match.group(1).strip()
+                    
+                    border_match = re.search(r"border-color:\s*([^;]+);", style)
+                    if border_match:
+                        border_color = border_match.group(1).strip()
+                
+                # Create a new standardized panel
+                new_panel = self.soup.new_tag("div")
+                new_panel["class"] = ["custom-panel"]
+                
+                if bg_color:
+                    if bg_color.lower() == "#f4f5f7" or bg_color.lower() == "#f5f5f5":
+                        new_panel["class"].append("panel-gray")
+                    elif bg_color.lower() == "#e3fcef" or bg_color.lower() == "#e6f9ee":
+                        new_panel["class"].append("panel-green")
+                    elif bg_color.lower() == "#eae6ff":
+                        new_panel["class"].append("panel-purple")
+                    elif bg_color.lower() == "#deebff":
+                        new_panel["class"].append("panel-blue")
+                    else:
+                        # Use inline style as fallback if color isn't recognized
+                        new_panel["style"] = f"background-color: {bg_color};"
+                        if border_color:
+                            new_panel["style"] += f" border-color: {border_color};"
+                
+                # Find the panel content
+                panel_content = panel.find("div", class_="panelContent")
+                if panel_content:
+                    # Create content container
+                    content_div = self.soup.new_tag("div")
+                    content_div["class"] = ["panel-content"]
+                    
+                    # Move the content
+                    for child in panel_content.contents:
+                        content_div.append(child)
+                    
+                    new_panel.append(content_div)
+                
+                # Replace the original panel with the new one
+                panel.replace_with(new_panel)
+                self.logger.info("Processed panel element.")
+            except Exception as e:
+                self.logger.error(f"Error processing panel element: {e}", exc_info=True)
+    
+    def _process_toc_macros(self) -> None:
+        """
+        Process Confluence Table of Contents macros, either by simplifying them
+        or replacing with an appropriate heading.
+        """
+        # Look for TOC divs with inline styles
+        for toc in self.soup.find_all("div", class_=lambda c: c and "toc" in c.lower()):
+            try:
+                # Create a simple replacement
+                toc_heading = self.soup.new_tag("div")
+                toc_heading["class"] = ["table-of-contents"]
+                
+                # Add a header for the TOC
+                heading = self.soup.new_tag("h2")
+                heading.string = "Table of Contents"
+                toc_heading.append(heading)
+                
+                # Try to preserve the actual TOC structure if it exists
+                toc_list = toc.find("ul")
+                if toc_list:
+                    # Clean up the list but keep its structure
+                    for li in toc_list.find_all("li"):
+                        for a in li.find_all("a"):
+                            # Keep href but remove Confluence-specific attributes
+                            href = a.get("href", "")
+                            text = a.get_text(strip=True)
+                            new_a = self.soup.new_tag("a", href=href)
+                            new_a.string = text
+                            a.replace_with(new_a)
+                    
+                    toc_heading.append(toc_list)
+                
+                # Replace the original TOC with the new one
+                toc.replace_with(toc_heading)
+                self.logger.info("Processed TOC macro.")
+            except Exception as e:
+                self.logger.error(f"Error processing TOC macro: {e}", exc_info=True)
+    
+    def _process_create_links(self) -> None:
+        """
+        Process Confluence create link elements that won't function outside of Confluence.
+        Replace them with appropriate static text or links.
+        """
+        for create_link in self.soup.find_all("a", class_="createlink"):
+            try:
+                # Extract the link text
+                link_text = create_link.get_text(strip=True)
+                
+                # Replace with a span indicating this was a creation link
+                span = self.soup.new_tag("span")
+                span["class"] = ["missing-page"]
+                span.string = link_text
+                
+                create_link.replace_with(span)
+                self.logger.info(f"Processed create link: {link_text}")
+            except Exception as e:
+                self.logger.error(f"Error processing create link: {e}", exc_info=True)
+    
+    def _remove_attachments_section(self) -> None:
+        """
+        Remove the attachments section from Confluence pages as it's not relevant
+        outside of the Confluence environment.
+        """
+        # Find the attachments section
+        attachments_section = self.soup.find("div", class_="pageSection", id="attachments")
+        if attachments_section:
+            attachments_section.decompose()
+            self.logger.info("Removed attachments section.")
+        
+        # Also look for the "greybox" that lists attachments
+        grey_box = self.soup.find("div", class_="greybox")
+        if grey_box:
+            grey_box.decompose()
+            self.logger.info("Removed attachments grey box.")
+    
+    def _check_empty_document(self) -> None:
+        """
+        Check if the document is essentially empty and add a placeholder note if it is.
+        """
+        main_content = self.soup.find("div", id="main-content")
+        if main_content:
+            # Check if the main content has any substantial content
+            text_content = main_content.get_text(strip=True)
+            has_meaningful_elements = False
+            
+            for child in main_content.find_all(["p", "div", "table", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6"]):
+                if child.get_text(strip=True) and child.name != "div" or child.find("img"):
+                    has_meaningful_elements = True
+                    break
+            
+            if not text_content or not has_meaningful_elements:
+                # Create a placeholder note
+                note = self.soup.new_tag("p")
+                note["class"] = ["empty-document-note"]
+                note.string = "Essa página era uma nodo mãe do Confluence, e não possuia conteúdo relevante. As páginas relevantes estão contidas dentro da pasta de mesmo nome."
+                
+                # Clear the main content and add the note
+                main_content.clear()
+                main_content.append(note)
+                self.logger.info("Added empty document placeholder.")
+
+    def _remove_confluence_specific(self) -> None:
+        # Implementation of _remove_confluence_specific method
+        pass
