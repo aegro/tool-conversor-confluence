@@ -52,10 +52,15 @@ class HTMLCleaner:
         title (str): Extracted document title
         confluence_classes (Set[str]): Confluence-specific classes to remove
         confluence_ids (Set[str]): Confluence-specific IDs to remove
+        original_file_path (Optional[Path]): Path to the original input HTML file
     """
 
     def __init__(
-        self, html_content: str, target_dir: Path, config: Optional[Dict] = None
+        self,
+        html_content: str,
+        target_dir: Path,
+        config: Optional[Dict] = None,
+        original_file_path: Optional[Path] = None,
     ):
         """
         Initialize HTMLCleaner with content and configuration.
@@ -64,12 +69,14 @@ class HTMLCleaner:
             html_content (str): Raw HTML content to clean
             target_dir (Path): Directory for saving processed resources
             config (Optional[Dict]): Configuration override. Defaults to None
+            original_file_path (Optional[Path]): Path to the original input HTML file. Defaults to None.
         """
         # Parse HTML with lxml parser for better handling
         self.soup = BeautifulSoup(html_content, "lxml")
         self.target_dir = Path(target_dir)
         self.config = config or get_config()
         self.logger = logging.getLogger(__name__)
+        self.original_file_path = original_file_path
 
         # Extract standard classes from config
         self.standard_classes = self.config.get("standard_html_classes", {})
@@ -769,8 +776,14 @@ class HTMLCleaner:
         Clean image elements and embed them using Base64 encoding.
         - Removes unnecessary attributes
         - Preserves essential attributes (alt, title, width, height)
-        - Embeds image data directly into the src attribute.
+        - Embeds image data directly into the src attribute using the original file path for resolution.
         """
+        if not self.original_file_path:
+            self.logger.error("Cannot process images: original_file_path not provided to HTMLCleaner.")
+            return
+
+        original_base_dir = self.original_file_path.parent
+
         for img in self.soup.find_all("img"):
             original_src = "N/A"
             try:
@@ -792,23 +805,23 @@ class HTMLCleaner:
                     f"Original src: '{original_src}', Clean src (removed query params): '{clean_src}'"
                 )
 
-                # Check if src is already an absolute path (potentially set by previous logic)
+                # Check if src is already an absolute path (unlikely but possible)
                 potential_abs_path = Path(clean_src)
                 if potential_abs_path.is_absolute() and potential_abs_path.is_file():
                     image_path = potential_abs_path
                     self.logger.debug(
-                        f"Strategy 1 (absolute path): Successfully resolved image path: {image_path}"
+                        f"Path is absolute: Using image path: {image_path}"
                     )
-                # Check if src is a relative path that needs resolving
+                # Check if src is a relative path that needs resolving from the ORIGINAL file location
                 elif not clean_src.startswith(("http://", "https://", "data:")):
                     self.logger.debug(
-                        f"Starting image path resolution for: '{clean_src}' from '{self.target_dir}'"
+                        f"Starting image path resolution for relative src: '{clean_src}' from original file dir: '{original_base_dir}'"
                     )
 
-                    # Strategy 1: Relative to the HTML file's directory (self.target_dir)
-                    potential_path_1 = self.target_dir / clean_src
+                    # Strategy 1: Relative to the ORIGINAL HTML file's directory (original_base_dir)
+                    potential_path_1 = original_base_dir / clean_src
                     self.logger.debug(
-                        f"Strategy 1: Trying path relative to HTML file: {potential_path_1}"
+                        f"Strategy 1: Trying path relative to original HTML file: {potential_path_1}"
                     )
                     if potential_path_1.resolve().is_file():
                         image_path = potential_path_1.resolve()
@@ -820,11 +833,12 @@ class HTMLCleaner:
                             f"Strategy 1: Failed to find image at: {potential_path_1}"
                         )
 
-                        # Strategy 2: Relative to the *parent* directory if src is in 'attachments' or 'images'
-                        # (Assumes HTML is in a subfolder, resources are one level up)
+                        # Strategy 2: Relative to the ORIGINAL HTML file's *parent* directory if src is in 'attachments' or 'images'
+                        # (Assumes HTML is in a subfolder, resources are one level up in the INPUT structure)
                         if (
-                            "attachments/" in clean_src or "images/" in clean_src
-                        ) and self.target_dir.parent:
+                            ("attachments/" in clean_src or "images/" in clean_src)
+                            and original_base_dir.parent
+                        ):
                             resource_folder = (
                                 "attachments"
                                 if "attachments/" in clean_src
@@ -835,12 +849,12 @@ class HTMLCleaner:
                                 f"{resource_folder}/", 1
                             )[-1]
                             potential_path_2 = (
-                                self.target_dir.parent
+                                original_base_dir.parent # Search relative to original parent
                                 / resource_folder
                                 / relative_to_resource_folder
                             )
                             self.logger.debug(
-                                f"Strategy 2: Trying path one level up from HTML file: {potential_path_2}"
+                                f"Strategy 2: Trying path one level up from original HTML file: {potential_path_2}"
                             )
                             if potential_path_2.resolve().is_file():
                                 image_path = potential_path_2.resolve()
@@ -852,15 +866,15 @@ class HTMLCleaner:
                                     f"Strategy 2: Failed to find image at: {potential_path_2}"
                                 )
 
-                                # Strategy 3: Recursive search upwards to find attachments or images folders
+                                # Strategy 3: Recursive search upwards from the ORIGINAL file dir
                                 if resource_folder in ["attachments", "images"]:
                                     self.logger.debug(
-                                        f"Strategy 3: Starting recursive search upwards to find {resource_folder} directory"
+                                        f"Strategy 3: Starting recursive search upwards from original file dir to find {resource_folder} directory"
                                     )
-                                    # Start from the directory containing the HTML file and go up
-                                    current_dir = self.target_dir
+                                    # Start from the directory containing the original HTML file and go up
+                                    current_dir = original_base_dir
                                     search_attempts = 0
-                                    max_attempts = 10  # Prevent infinite loops by limiting search depth
+                                    max_attempts = 10 # Prevent infinite loops
 
                                     while (
                                         current_dir and search_attempts < max_attempts
@@ -868,7 +882,6 @@ class HTMLCleaner:
                                         self.logger.debug(
                                             f"Strategy 3: Searching at level {search_attempts} in {current_dir}"
                                         )
-                                        # Look for resource folder at this level
                                         resource_dir = current_dir / resource_folder
                                         potential_path_3 = (
                                             resource_dir / relative_to_resource_folder
@@ -888,10 +901,9 @@ class HTMLCleaner:
                                                 f"Strategy 3: Found resource directory at {resource_dir} but image not found"
                                             )
 
-                                        # Move up one level
                                         if (
                                             current_dir.parent == current_dir
-                                        ):  # Reached root
+                                        ): # Reached root
                                             self.logger.debug(
                                                 "Strategy 3: Reached filesystem root, stopping search"
                                             )
@@ -908,16 +920,9 @@ class HTMLCleaner:
                                             f"Strategy 3: Reached max search depth ({max_attempts}), stopping search"
                                         )
                         else:
-                            self.logger.debug(
-                                f"Strategy 2/3: Resource folder pattern not found in path or no parent directory"
+                             self.logger.debug(
+                                f"Strategy 2/3: Resource folder pattern not found in path or no parent directory relative to original file."
                             )
-
-                    # Strategy 4: Fallback - Check if original_src string *itself* is a valid absolute path (maybe set previously)
-                    if not image_path and potential_abs_path.is_file():
-                        image_path = potential_abs_path
-                        self.logger.debug(
-                            f"Strategy 4 (fallback): Treating original src as absolute path: {image_path}"
-                        )
 
                 # --- Start Base64 Embedding ---
                 if image_path and image_path.is_file():

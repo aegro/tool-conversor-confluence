@@ -1,6 +1,6 @@
 # Default configuration for HTML processor
-input_directory: 'io/VEN'
-output_directory: 'io/output/'
+input_directory: 'input/REL'
+output_directory: 'output/REL/'
 create_docx: false
 log_level: 'INFO'
 log_file: 'html_processor.log'

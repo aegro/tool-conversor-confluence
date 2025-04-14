@@ -417,13 +417,24 @@ class FileProcessor:
             # Extract and validate breadcrumbs
             breadcrumbs = self._extract_breadcrumbs(soup)
             if not breadcrumbs:
-                return False, "No breadcrumbs found"
+                # Try to use the title as a fallback for logging/identification if breadcrumbs fail
+                title = soup.find('title').string if soup.find('title') else file_path.name
+                error_msg = f"No breadcrumbs found in {file_path.name} (Title: {title}). Skipping file."
+                self.logger.warning(error_msg)
+                # Return success=False but don't increment failed_files here as it's a known skip condition
+                return False, error_msg # Indicate skipped, not outright failure
 
-            # Create target directory structure
-            target_dir = self._create_directory_path(new_base_dir, breadcrumbs[1:])
+            # Create target directory structure based on breadcrumbs
+            # Ensure the first breadcrumb (space name) is included in the path from new_base_dir
+            target_dir = self._create_directory_path(new_base_dir, breadcrumbs) # Pass all breadcrumbs
 
-            # Clean HTML content
-            cleaner = HTMLCleaner(str(soup), target_dir)
+            # Clean HTML content - PASS ORIGINAL FILE PATH HERE
+            cleaner = HTMLCleaner(
+                html_content=str(soup),
+                target_dir=target_dir, # This is the OUTPUT directory for placing the final file
+                config=self.config, # Pass config if needed by cleaner
+                original_file_path=file_path # Pass the ORIGINAL file path
+            )
             cleaned_html = cleaner.clean()
 
             # Save cleaned HTML
@@ -434,12 +445,18 @@ class FileProcessor:
             if self.create_docx:
                 self._convert_to_docx(target_html_path, target_dir)
                 self.stats["created_docx"] += 1
-                return True, f"Processed HTML and created DOCX in {target_dir}"
+                # Return path relative to the overall output_dir for clarity
+                relative_output_path = target_dir.relative_to(self.output_dir)
+                return True, f"Processed HTML and created DOCX in {relative_output_path}"
 
-            return True, f"Processed HTML in {target_dir}"
+            # Return path relative to the overall output_dir for clarity
+            relative_output_path = target_dir.relative_to(self.output_dir)
+            return True, f"Processed HTML in {relative_output_path}"
 
         except Exception as e:
-            self.logger.error(f"Error processing {file_path}: {e}", exc_info=True)
+            # Log specific error and return failure status
+            self.logger.error(f"Error processing file {file_path.name}: {e}", exc_info=True)
+            # Return success=False and the error message
             return False, str(e)
 
     def _read_html_file(self, file_path: Path) -> BeautifulSoup:

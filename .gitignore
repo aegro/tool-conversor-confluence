@@ -7,6 +7,10 @@ __pycache__/
 *.so
 
 io/
+input
+input/*
+output
+output/*
 output_test
 output_test/*
 test_output
