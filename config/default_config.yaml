@@ -1,5 +1,5 @@
 # Default configuration for HTML processor
-input_directory: 'io/VEN'
+input_directory: 'io/MKT'
 output_directory: 'io'
 create_docx: false
 log_level: 'INFO'

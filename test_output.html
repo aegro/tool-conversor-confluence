@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <title>
+   Test Emoji and Bullet Removal
+  </title>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&amp;family=JetBrains+Mono:wght@400;700&amp;family=Roboto:wght@400;700&amp;display=swap" rel="stylesheet">
+  <style>
+   body {
+                font-family: 'DM Sans', sans-serif;
+                color: #404040;
+                line-height: 1.5;
+                margin: 20px;
+            }
+
+            h1 {
+                font-family: 'Roboto', sans-serif;
+                color: #00c65e;
+            }
+
+            h2, h3, h4, h5, h6 {
+                font-family: 'Roboto', sans-serif;
+                color: #046062;
+            }
+
+            p {
+                margin-bottom: 1.5em;
+            }
+
+            strong {
+                font-weight: bold;
+            }
+
+            em {
+                color: #00c65e;
+                font-style: italic;
+            }
+
+            a {
+                color: #00c65e;
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: underline;
+            }
+
+            ul {
+                margin-bottom: 1.5em;
+            }
+
+            li {
+                margin-left: 20px;
+                list-style-type: disc;
+            }
+
+            img {
+                border: 1px solid #00c65e; 
+            }
+
+            /* Table Styles */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 1.5em;
+            }
+
+            th, td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+                vertical-align: top;
+            }
+
+            th {
+                background-color: #f2f2f2;
+                font-weight: bold;
+            }
+
+            tr:nth-child(even) {
+                background-color: #fafafa;
+            }
+
+            tr:hover {
+                background-color: #f5f5f5;
+            }
+
+            /* Code Block Styles */
+            .code-block {
+                margin: 1.5em 0;
+                border-radius: 6px;
+                overflow: hidden;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+                background-color: #f8f8f8;
+                border: 1px solid #e0e0e0;
+            }
+
+            .code-language {
+                background-color: #046062;
+                color: white;
+                font-size: 0.8em;
+                padding: 4px 12px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .code-content {
+                overflow-x: auto;
+            }
+
+            .code-content pre {
+                margin: 0;
+                padding: 16px;
+                overflow-x: auto;
+                background-color: #282c34;
+                color: #f8f8f2;
+                line-height: 1.5;
+                font-size: 14px;
+            }
+
+            /* Language-specific syntax highlighting */
+            .language-java .keyword,
+            .language-javascript .keyword, 
+            .language-python .keyword {
+                color: #ff79c6;
+            }
+
+            .language-java .string,
+            .language-javascript .string,
+            .language-python .string {
+                color: #f1fa8c;
+            }
+
+            .language-java .comment,
+            .language-javascript .comment,
+            .language-python .comment {
+                color: #6272a4;
+            }
+
+            /* Column Width Classes */
+            .column-25 { width: 25%; }
+            .column-33 { width: 33.333%; }
+            .column-50 { width: 50%; }
+            .column-67 { width: 66.666%; }
+            .column-75 { width: 75%; }
+            .column-100 { width: 100%; }
+
+            /* Status Styles */
+            .status-gray {
+                background-color: #7A869A;
+                color: #FFFFFF;
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+            .status-green {
+                background-color: #36B37E;
+                color: #FFFFFF;
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+            .status-red {
+                background-color: #FF5630;
+                color: #FFFFFF;
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+            .status-yellow {
+                background-color: #FFAB00;
+                color: #000000;
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+            .status-blue {
+                background-color: #0065FF;
+                color: #FFFFFF;
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+            .status-purple {
+                background-color: #6554C0;
+                color: #FFFFFF;
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+            .status-teal {
+                background-color: #00B8D9;
+                color: #FFFFFF;
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+            /* Expand Box Styles */
+            .expand-box {
+                border: 1px solid #ccc;
+                padding: 10px;
+                margin-bottom: 1.5em;
+                background-color: #f9f9f9;
+            }
+
+            .expand-box em {
+                display: block;
+                font-style: italic;
+                margin-bottom: 0.5em;
+            }
+            /* Decision Box Styles */
+            .decision-box {
+                border: 1px solid #00c65e;
+                padding: 10px;
+                margin-bottom: 1.5em;
+                background-color: #e6f9ee;
+            }
+
+            .decision-box em {
+                display: block;
+                font-style: italic;
+                color: #00c65e;
+                margin-bottom: 0.5em;
+            }
+  </style>
+ </head>
+ <body>
+  <h1>
+   Test Page for Bullet and Emoji Processing
+  </h1>
+  <h2>
+   Bullet and Icon Test
+  </h2>
+  <p>
+   Here is a blue bullet:
+   This should be removed.
+  </p>
+  <p>
+   Here is a wait icon:
+   This should be removed.
+  </p>
+  <p>
+   Here is a grey arrow down:
+   This should be removed.
+  </p>
+  <p>
+   Here is a check icon:
+   This should be removed.
+  </p>
+  <p>
+   Here is an error icon:
+   This should be removed.
+  </p>
+  <p>
+   Here is a help icon:
+   This should be removed.
+  </p>
+  <h2>
+   Emoji Test
+  </h2>
+  <p>
+   Here is an emoji:
+   ⤴
+   This should be replaced with ⤴
+  </p>
+  <p>
+   Here is another emoji:
+   🗓
+   Calendar emoji
+  </p>
+  <p>
+   Here is a rocket emoji:
+   🚀
+   This should be replaced with 🚀
+  </p>
+  <p>
+   Here is a heart emoji:
+   ❤️
+   This should be replaced with ❤️
+  </p>
+  <p>
+   This is a test paragraph with multiple bullets:
+   Bullet 1
+   Bullet 2
+   Bullet 3
+  </p>
+ </body>
+</html>

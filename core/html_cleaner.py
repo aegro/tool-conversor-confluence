@@ -579,6 +579,20 @@ class HTMLCleaner:
         for img in self.soup.find_all("img"):
             original_src = "N/A"
             try:
+                # Handle Confluence icons and bullets (remove them completely)
+                if img.get("src") and any(icon in img["src"] for icon in [
+                    "bullet_blue.gif", 
+                    "wait.gif", 
+                    "grey_arrow_down.png",
+                    # Add any other common icons/gifs to remove
+                    "check.png",
+                    "error.png", 
+                    "help_16.png",
+                ]):
+                    self.logger.info(f"Removing Confluence icon/bullet image: {img.get('src')}")
+                    img.decompose()
+                    continue
+                    
                 if "src" not in img.attrs or not img.attrs["src"]:
                     self.logger.warning(
                         "Image tag found without 'src' attribute. Removing tag."
@@ -1011,6 +1025,7 @@ class HTMLCleaner:
                 emoji_text = self.soup.new_string(emoji_fallback)
                 # Replace the img tag with the text node
                 emoji.replace_with(emoji_text)
+                self.logger.debug(f"Replaced emoji image with Unicode character: {emoji_fallback}")
             else:
                 # If no fallback is available, try to use the shortname or just remove it
                 shortname = emoji.get("data-emoji-shortname")

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Emoji and Bullet Removal</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>Test Page for Bullet and Emoji Processing</h1>
+    
+    <h2>Bullet and Icon Test</h2>
+    <p>Here is a blue bullet: <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/> This should be removed.</p>
+    
+    <p>Here is a wait icon: <img src="images/icons/wait.gif" height="16" width="16" alt=""/> This should be removed.</p>
+    
+    <p>Here is a grey arrow down: <img src="images/icons/grey_arrow_down.png" height="12" width="12" alt=""/> This should be removed.</p>
+    
+    <p>Here is a check icon: <img src="images/icons/check.png" width="16" height="16" alt="(seleção)"/> This should be removed.</p>
+    
+    <p>Here is an error icon: <img src="images/icons/error.png" width="16" height="16" alt="(erro)"/> This should be removed.</p>
+    
+    <p>Here is a help icon: <img src="images/icons/help_16.png" width="16" height="16" alt="(interrogação)"/> This should be removed.</p>
+    
+    <h2>Emoji Test</h2>
+    <p>Here is an emoji: <img class="emoticon emoticon-blue-star" data-emoji-id="2934" data-emoji-shortname=":arrow_heading_up:" data-emoji-fallback="⤴" src="images/icons/emoticons/72/2934.png" width="16" height="16" data-emoticon-name="blue-star" alt="(estrela azul)"/> This should be replaced with ⤴</p>
+    
+    <p>Here is another emoji: <img class="emoticon emoticon-blue-star" data-emoji-id="1f5d3" data-emoji-shortname=":calendar_spiral:" data-emoji-fallback="🗓" src="images/icons/emoticons/72/1f5d3.png" width="16" height="16" data-emoticon-name="blue-star" alt="(estrela azul)"/> Calendar emoji</p>
+    
+    <p>Here is a rocket emoji: <img class="emoticon emoticon-blue-star" data-emoji-id="1f680" data-emoji-shortname=":rocket:" data-emoji-fallback="🚀" src="images/icons/emoticons/72/1f680.png" width="16" height="16" data-emoticon-name="blue-star" alt="(estrela azul)"/> This should be replaced with 🚀</p>
+    
+    <p>Here is a heart emoji: <img class="emoticon emoticon-heart" data-emoji-id="2764" data-emoji-shortname=":heart:" data-emoji-fallback="❤️" src="images/icons/emoticons/heart.png" width="16" height="16" data-emoticon-name="heart" alt="(coração)"/> This should be replaced with ❤️</p>
+    
+    <p>This is a test paragraph with multiple bullets: 
+        <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/> Bullet 1
+        <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/> Bullet 2
+        <img src="images/icons/bullet_blue.gif" height="8" width="8" alt=""/> Bullet 3
+    </p>
+</body>
+</html> 
