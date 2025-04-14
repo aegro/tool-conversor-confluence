@@ -9,6 +9,8 @@ __pycache__/
 io/
 output_test
 output_test/*
+test_output
+test_output/*
 # Distribution / packaging
 .Python
 build/

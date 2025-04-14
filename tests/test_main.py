@@ -23,15 +23,22 @@ Or with pytest:
 
 import unittest
 from pathlib import Path
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 from unittest.mock import patch, Mock, mock_open
 import shutil
 import sys
 import os
 import requests
 
-# Add parent directory to path to import main module
+# Add parent directory to path to import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Import the necessary modules instead of from main
+from core.html_cleaner import HTMLCleaner
+from core.file_processor import FileProcessor
+
+# Replace the original direct imports from main with the appropriate imports from modules
+"""
+Original imports:
 from main import (clean_confluence_html, extract_breadcrumbs, create_directory_path,
                  process_html_file, setup_directory_structure, clean_attributes_and_classes,
                  remove_meta_elements, convert_user_links_to_strong, remove_all_scripts,
@@ -41,6 +48,7 @@ from main import (clean_confluence_html, extract_breadcrumbs, create_directory_p
                  clean_images, remove_comments, remove_empty_attributes, clean_whitespace,
                  simplify_document_structure, add_h1_heading, clean_roles,
                  remove_footer_section, remove_breadcrumb_section, organize_duplicate_named_files)
+"""
 
 class TestConfluenceHtmlCleaner(unittest.TestCase):
     """
