@@ -1,11 +1,9 @@
 # Tool Conversor Confluence
 
-[![GitHub Actions](https://github.com/yourusername/tool-conversor-confluence/actions/workflows/python-tests.yml/badge.svg)](https://github.com/yourusername/tool-conversor-confluence/actions/workflows/python-tests.yml)
-[![PyPI version](https://badge.fury.io/py/tool-conversor-confluence.svg)](https://badge.fury.io/py/tool-conversor-confluence)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python Versions](https://img.shields.io/pypi/pyversions/tool-conversor-confluence.svg)](https://pypi.org/project/tool-conversor-confluence/)
+[![Python Versions](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-A robust command-line tool for processing Confluence HTML exports—cleaning up the HTML, converting it to DOCX (optional), and organizing file structures based on breadcrumbs.
+A comprehensive command-line tool for processing Confluence HTML exports—cleaning up the HTML, converting it to DOCX, and organizing file structures based on breadcrumbs. This tool is designed to help migrate content from Confluence while maintaining document structure and formatting.
 
 ## Table of Contents
 
@@ -39,12 +37,31 @@ If you're looking to migrate from Confluence while maintaining document quality 
 
 ## Features
 
-* Cleans Confluence-specific classes and scripts from exported HTML.  
-* Organizes files based on breadcrumb hierarchy.  
-* Converts HTML files to DOCX (optional).  
-* Generates a markdown or CSV document tree representation of your Confluence exports.
-* Handles image and attachment resources properly.
-* Preserves document styling while removing Confluence-specific elements.
+* **HTML Cleaning**
+  - Removes Confluence-specific classes, scripts, and elements
+  - Standardizes HTML structure and formatting
+  - Preserves document structure and styling
+  - Handles tables, lists, and other complex elements
+
+* **Document Organization**
+  - Organizes files based on breadcrumb hierarchy
+  - Preserves document relationships and structure
+  - Handles duplicate filenames intelligently
+
+* **Format Conversion**
+  - Converts cleaned HTML to well-formatted DOCX documents
+  - Maintains document structure in the output
+  - Preserves images and other embedded content
+
+* **Resource Management**
+  - Processes and relocates images and attachments
+  - Handles both local and remote resources
+  - Maintains proper file references
+
+* **Documentation Tools**
+  - Generates document tree in multiple formats (table, tree)
+  - Supports custom separators and formatting
+  - Can include or exclude filenames from the tree view
 
 ---
 
@@ -54,6 +71,10 @@ Make sure you have the following installed on your system:
 
 * **Python 3.8+**  
 * **pip** (Python package installer)
+* **libxml2** and **libxslt** development packages (required for lxml)
+  - On macOS: `brew install libxml2 libxslt`
+  - On Ubuntu/Debian: `sudo apt-get install libxml2-dev libxslt1-dev`
+  - On CentOS/RHEL: `sudo yum install libxml2-devel libxslt-devel`
 
 ---
 
@@ -68,18 +89,17 @@ Make sure you have the following installed on your system:
    cd tool-conversor-confluence
    ```
 
-2. **Create and activate a virtual environment**:
+2. **Run the setup script** (creates venv and installs dependencies):
 
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ./prep_python_virtualev.sh
    ```
-
-3. **Install dependencies**:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
+   
+   This will:
+   - Create a Python virtual environment
+   - Activate the environment
+   - Install all required dependencies
+   - Set up the project for development
 
 ### Using pip (For End Users)
 
@@ -101,20 +121,52 @@ This should display the available command-line options and their descriptions.
 
 ## Configuration
 
-The default configuration is stored in:
+The default configuration is stored in `config/default_config.yaml` and includes the following settings:
 
 ```yaml
-# config/default_config.yaml
-input_directory: 'io/SI'
-output_directory: 'io'
-create_docx: false
-log_level: 'INFO'
-log_file: 'html_processor.log'
+# Basic settings
+input_directory: 'input/REL'  # Default input directory for Confluence exports
+output_directory: 'output/'   # Output directory for processed files
+create_docx: false           # Whether to create DOCX files
+log_level: 'INFO'            # Logging level (DEBUG, INFO, WARNING, ERROR)
+log_file: 'html_processor.log'  # Log file path
 
+# HTML cleaning settings
+standard_html_classes:
+  table: ['sortable']
+  td: ['selected', 'header']
+  tr: ['odd', 'even']
+  div: ['container', 'row', 'column']
+  span: ['bold', 'italic', 'underline']
+  ul: ['list', 'navigation']
+  li: ['active', 'current']
+  img: ['thumbnail', 'responsive']
+  a: ['active', 'visited', 'external']
+
+# Image handling
+image_settings:
+  border_color: '#00c65e'  # Border color for images
+  border_width: '1px'      # Border width for images
+  allowed_attrs: ['src', 'alt', 'width', 'height', 'title', 'style']
+
+# Filename processing
+filename_settings:
+  preserve_spaces: true     # Preserve spaces in filenames
+  replace_character: '-'    # Character to replace spaces with if not preserved
+  sanitize_characters: true # Remove special characters from filenames
+  url_safe_filenames: true  # Ensure filenames are URL-safe
+
+# HTTP settings for external resources
+http_settings:
+  timeout: 30               # Request timeout in seconds
+  max_retries: 3            # Maximum retry attempts
+  user_agent: 'HTML Processor Bot/1.0'  # User agent for HTTP requests
+
+# Document tree generation
 document_tree:
-  format: 'table'
-  separator: ';'
-  show_filenames: false
+  format: 'table'          # 'table' or 'tree'
+  separator: ';'           # Separator for table format
+  show_filenames: false    # Whether to show filenames in the tree
 ```
 
 * Adjust paths (e.g., `input_directory`, `output_directory`) as needed.  
