@@ -924,40 +924,66 @@ class HTMLCleaner:
                                 f"Strategy 2/3: Resource folder pattern not found in path or no parent directory relative to original file."
                             )
 
-                # --- Start Base64 Embedding ---
+                # --- Start Image Processing ---
                 if image_path and image_path.is_file():
+                    # Check if we should embed as base64
+                    embed_as_base64 = self.config.get('image_settings', {}).get('embed_as_base64', True)
+                    
                     try:
-                        self.logger.debug(
-                            f"Image found! Attempting to embed image from: {image_path}"
-                        )
-                        with open(image_path, "rb") as image_file:
-                            image_data = image_file.read()
+                        if embed_as_base64:
+                            self.logger.debug(
+                                f"Image found! Attempting to embed image from: {image_path}"
+                            )
+                            with open(image_path, "rb") as image_file:
+                                image_data = image_file.read()
 
-                        # Guess MIME type based on file extension
-                        mime_type, _ = guess_type(image_path)
-                        if mime_type is None:
-                            mime_type = "application/octet-stream"  # Default if unknown
-                        self.logger.debug(
-                            f"Determined MIME type: {mime_type} for {image_path.name}"
-                        )
+                            # Guess MIME type based on file extension
+                            mime_type, _ = guess_type(image_path)
+                            if mime_type is None:
+                                mime_type = "application/octet-stream"  # Default if unknown
+                            self.logger.debug(
+                                f"Determined MIME type: {mime_type} for {image_path.name}"
+                            )
 
-                        # Encode image data in Base64
-                        base64_data = base64.b64encode(image_data).decode("utf-8")
-                        # Create the data URI
-                        img["src"] = f"data:{mime_type};base64,{base64_data}"
-                        self.logger.info(
-                            f"Successfully embedded image {image_path.name} using Base64"
+                            # Encode image data in Base64
+                            base64_data = base64.b64encode(image_data).decode("utf-8")
+                            # Create the data URI
+                            img["src"] = f"data:{mime_type};base64,{base64_data}"
+                            self.logger.info(
+                                f"Successfully embedded image {image_path.name} using Base64"
+                            )
+                        else:
+                            # Keep the file path but make it relative to output
+                            # Calculate relative path from output HTML to image
+                            # Get the relative path from the target directory to the image
+                            if self.target_dir:
+                                # Calculate the relative path from the output HTML file to the image
+                                relative_path = os.path.relpath(image_path, self.target_dir)
+                                img["src"] = relative_path
+                                self.logger.info(
+                                    f"Kept image path as relative: {relative_path}"
+                                )
+                            else:
+                                # If no target directory, keep the original path
+                                img["src"] = str(image_path)
+                                self.logger.info(
+                                    f"Kept image path: {image_path}"
+                                )
+                    except ValueError:
+                        # If paths are on different drives (Windows), keep absolute path
+                        img["src"] = str(image_path)
+                        self.logger.warning(
+                            f"Could not make relative path, keeping absolute: {image_path}"
                         )
-
                     except FileNotFoundError:
                         self.logger.warning(
-                            f"Image file not found during embedding attempt: {image_path}. Removing img tag."
+                            f"Image file not found during processing: {image_path}. Removing img tag."
                         )
                         img.decompose()
                         continue
                     except Exception as e:
                         self.logger.error(
-                            f"Error reading or embedding image {image_path}: {e}. Removing img tag.",
+                            f"Error processing image {image_path}: {e}. Removing img tag.",
                             exc_info=True,
                         )
                         img.decompose()

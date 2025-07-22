@@ -1,11 +1,9 @@
 # Tool Conversor Confluence
 
-[![GitHub Actions](https://github.com/yourusername/tool-conversor-confluence/actions/workflows/python-tests.yml/badge.svg)](https://github.com/yourusername/tool-conversor-confluence/actions/workflows/python-tests.yml)
-[![PyPI version](https://badge.fury.io/py/tool-conversor-confluence.svg)](https://badge.fury.io/py/tool-conversor-confluence)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python Versions](https://img.shields.io/pypi/pyversions/tool-conversor-confluence.svg)](https://pypi.org/project/tool-conversor-confluence/)
+[![Python Versions](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
-A robust command-line tool for processing Confluence HTML exports—cleaning up the HTML, converting it to DOCX (optional), and organizing file structures based on breadcrumbs.
+A comprehensive command-line tool for processing Confluence HTML exports—cleaning up the HTML, converting it to DOCX, and organizing file structures based on breadcrumbs. This tool is designed to help migrate content from Confluence while maintaining document structure and formatting.
 
 ## Table of Contents
 
@@ -39,12 +37,45 @@ If you're looking to migrate from Confluence while maintaining document quality 
 
 ## Features
 
-* Cleans Confluence-specific classes and scripts from exported HTML.  
-* Organizes files based on breadcrumb hierarchy.  
-* Converts HTML files to DOCX (optional).  
-* Generates a markdown or CSV document tree representation of your Confluence exports.
-* Handles image and attachment resources properly.
-* Preserves document styling while removing Confluence-specific elements.
+* **HTML to Markdown Conversion**
+  - Convert Confluence HTML to clean Markdown
+  - Preserve document structure and formatting
+  - Handle images and attachments as separate files
+  - Support for tables, code blocks, and other Markdown elements
+  - Configurable output options
+
+* **HTML Cleaning**
+  - Removes Confluence-specific classes, scripts, and elements
+  - Standardizes HTML structure and formatting
+  - Preserves document structure and styling
+  - Handles tables, lists, and other complex elements
+
+* **Document Organization**
+  - Organizes files based on breadcrumb hierarchy
+  - Preserves document relationships and structure
+  - Handles duplicate filenames intelligently
+
+* **Format Conversion**
+  - Converts cleaned HTML to well-formatted DOCX documents
+  - Markdown output with customizable formatting options
+  - Maintains document structure in the output
+  - Preserves images and other embedded content
+
+* **Two-Stage Pipeline (Advanced)**
+  - Combines HTML cleaning with Docling conversion
+  - Superior Markdown quality with advanced formatting
+  - Configurable image handling (embedded base64 or file references)
+  - Automated workflow with detailed progress tracking
+
+* **Resource Management**
+  - Processes and relocates images and attachments
+  - Handles both local and remote resources
+  - Maintains proper file references
+
+* **Documentation Tools**
+  - Generates document tree in multiple formats (table, tree)
+  - Supports custom separators and formatting
+  - Can include or exclude filenames from the tree view
 
 ---
 
@@ -54,6 +85,10 @@ Make sure you have the following installed on your system:
 
 * **Python 3.8+**  
 * **pip** (Python package installer)
+* **libxml2** and **libxslt** development packages (required for lxml)
+  - On macOS: `brew install libxml2 libxslt`
+  - On Ubuntu/Debian: `sudo apt-get install libxml2-dev libxslt1-dev`
+  - On CentOS/RHEL: `sudo yum install libxml2-devel libxslt-devel`
 
 ---
 
@@ -68,18 +103,17 @@ Make sure you have the following installed on your system:
    cd tool-conversor-confluence
    ```
 
-2. **Create and activate a virtual environment**:
+2. **Run the setup script** (creates venv and installs dependencies):
 
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ./prep_python_virtualev.sh
    ```
-
-3. **Install dependencies**:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
+   
+   This will:
+   - Create a Python virtual environment
+   - Activate the environment
+   - Install all required dependencies
+   - Set up the project for development
 
 ### Using pip (For End Users)
 
@@ -101,20 +135,66 @@ This should display the available command-line options and their descriptions.
 
 ## Configuration
 
-The default configuration is stored in:
+Create a `config.yaml` file in your project directory or modify the default configuration in `config/default_config.yaml`. The following settings are available:
+
+### Basic Settings
 
 ```yaml
-# config/default_config.yaml
-input_directory: 'io/SI'
-output_directory: 'io'
-create_docx: false
-log_level: 'INFO'
-log_file: 'html_processor.log'
+# Basic settings
+input_directory: 'input/REL'  # Input directory containing Confluence HTML exports
+output_directory: 'output/'   # Base output directory
+create_docx: false           # Set to true to enable DOCX conversion
+log_level: 'INFO'            # Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+log_file: 'html_processor.log'  # Log file path
 
+# Markdown Conversion
+markdown:
+  enabled: true              # Enable Markdown output
+  output_dir: 'markdown'     # Subdirectory for markdown output
+  image_dir: 'images'        # Subdirectory for images (relative to markdown file)
+  image_output: 'images'     # Where to store images (relative to output_dir)
+  extensions:                # Markdown extensions to enable
+    - tables
+    - fenced_code
+    - footnotes
+  code_style: 'github'      # Code block style (github, fenced, etc.)
+  preserve_internal_links: true  # Convert internal links to markdown links
+  flatten_output: false     # Output all markdown files in a single directory
+```
+
+### HTML Cleaning Settings
+
+```yaml
+# HTML cleaning settings
+standard_html_classes:
+  # Define standard classes to preserve during cleaning
+  table: ['sortable']
+  td: ['selected', 'header']
+  # ... other element classes
+
+image_settings:
+  border_color: '#00c65e'  # Border color for images
+  border_width: '1px'      # Border width for images
+  allowed_attrs: ['src', 'alt', 'width', 'height', 'title', 'style']
+
+# Filename processing
+filename_settings:
+  preserve_spaces: true     # Preserve spaces in filenames
+  replace_character: '-'    # Character to replace spaces with if not preserved
+  sanitize_characters: true # Remove special characters from filenames
+  url_safe_filenames: true  # Ensure filenames are URL-safe
+
+# HTTP settings for external resources
+http_settings:
+  timeout: 30               # Request timeout in seconds
+  max_retries: 3            # Maximum retry attempts
+  user_agent: 'HTML Processor Bot/1.0'  # User agent for HTTP requests
+
+# Document tree generation
 document_tree:
-  format: 'table'
-  separator: ';'
-  show_filenames: false
+  format: 'table'          # 'table' or 'tree'
+  separator: ';'           # Separator for table format
+  show_filenames: false    # Whether to show filenames in the tree
 ```
 
 * Adjust paths (e.g., `input_directory`, `output_directory`) as needed.  
@@ -207,6 +287,71 @@ python main.py --config my_config.yaml --log-level DEBUG
 ```bash
 python main.py -i /path/to/confluence_exports -o /path/to/output --dry-run
 ```
+
+---
+
+## Two-Stage Pipeline (Advanced Markdown Conversion)
+
+The two-stage pipeline provides superior Markdown conversion by combining HTML cleaning with Docling's advanced conversion capabilities.
+
+### Quick Start
+
+```bash
+# Basic two-stage conversion
+python run_two_stage_conversion.py -i input/confluence_export -o output/markdown_final
+```
+
+### Features
+
+- **High-Quality Markdown**: Docling provides superior HTML to Markdown conversion
+- **Image Preservation**: Images are preserved as file references, not embedded base64
+- **Automated Workflow**: Single command runs both stages automatically
+- **Progress Tracking**: Detailed progress information for both stages
+
+### Configuration
+
+The two-stage pipeline uses a special configuration to preserve images as files:
+
+```yaml
+# config/two_stage_config.yaml
+image_settings:
+  embed_as_base64: false  # Critical for image preservation
+  download_external: false
+  max_width: 800
+```
+
+### Advanced Usage
+
+```bash
+# With custom configuration and verbose output
+python run_two_stage_conversion.py \
+    -i input/confluence_export \
+    -o output/markdown_final \
+    --config config/my_config.yaml \
+    --verbose
+
+# Keep temporary files for debugging
+python run_two_stage_conversion.py \
+    -i input/confluence_export \
+    -o output/debug \
+    --keep-temp \
+    --verbose
+```
+
+### Output Structure
+
+```
+output/
+├── markdown/          # Final Markdown files
+│   └── SpaceName/
+│       └── *.md
+├── html/             # Cleaned HTML (reference)
+│   └── SpaceName/
+│       └── *.html
+└── conversion_report.json
+```
+
+For detailed documentation, see [Two-Stage Pipeline Guide](docs/two-stage-pipeline-guide.md).
 
 ---
 

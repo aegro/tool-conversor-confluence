@@ -31,6 +31,7 @@ from htmldocx import HtmlToDocx
 
 from utils.utilities import get_config
 from core.html_cleaner import HTMLCleaner
+from core.markdown_converter import MarkdownConverter
 
 
 class FileProcessor:
@@ -440,18 +441,57 @@ class FileProcessor:
             # Save cleaned HTML
             target_html_path = target_dir / new_filename
             self._save_html_file(target_html_path, cleaned_html)
+            
+            # Track what outputs were created
+            outputs_created = ["HTML"]
 
             # Convert to DOCX if requested
             if self.create_docx:
                 self._convert_to_docx(target_html_path, target_dir)
                 self.stats["created_docx"] += 1
-                # Return path relative to the overall output_dir for clarity
-                relative_output_path = target_dir.relative_to(self.output_dir)
-                return True, f"Processed HTML and created DOCX in {relative_output_path}"
+                outputs_created.append("DOCX")
+                
+            # Convert to Markdown if enabled
+            markdown_config = self.config.get("markdown", {})
+            if markdown_config.get("enabled", False):
+                # Create markdown converter
+                converter = MarkdownConverter(self.config, self.logger)
+                
+                # Determine markdown output path
+                markdown_dir = new_base_dir.parent / markdown_config.get("output_dir", "markdown")
+                
+                # Mirror the directory structure for markdown files
+                relative_path = target_dir.relative_to(new_base_dir)
+                markdown_target_dir = markdown_dir / relative_path
+                markdown_target_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Convert to markdown
+                markdown_filename = new_filename.replace(".html", ".md")
+                markdown_path = markdown_target_dir / markdown_filename
+                
+                # Convert the cleaned HTML to markdown
+                markdown_content = converter.convert(
+                    cleaned_html, 
+                    markdown_target_dir,
+                    page_id=file_path.stem,
+                    original_path=file_path
+                )
+                
+                # Save markdown file
+                with markdown_path.open("w", encoding="utf-8") as f:
+                    f.write(markdown_content)
+                    
+                outputs_created.append("Markdown")
+                
+                # Update stats for markdown conversion
+                if "created_markdown" not in self.stats:
+                    self.stats["created_markdown"] = 0
+                self.stats["created_markdown"] += 1
 
             # Return path relative to the overall output_dir for clarity
             relative_output_path = target_dir.relative_to(self.output_dir)
-            return True, f"Processed HTML in {relative_output_path}"
+            outputs_str = " and ".join(outputs_created)
+            return True, f"Processed {outputs_str} in {relative_output_path}"
 
         except Exception as e:
             # Log specific error and return failure status

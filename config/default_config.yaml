@@ -21,6 +21,7 @@ image_settings:
   border_color: '#00c65e'
   border_width: '1px'
   allowed_attrs: ['src', 'alt', 'width', 'height', 'title', 'style']
+  embed_as_base64: true  # If true, images will be embedded as base64; if false, image paths will be preserved
 
 # Filename processing settings
 filename_settings:
@@ -39,3 +40,17 @@ document_tree:
   format: 'table'  # or 'tree' for the original format
   separator: ';'  # separator between columns
   show_filenames: false  # Set to false to hide filenames
+
+# Markdown conversion settings
+markdown:
+  enabled: false  # Enable/disable Markdown output
+  output_dir: 'markdown'  # Subdirectory for markdown output
+  image_dir: 'images'  # Subdirectory for images (relative to markdown file)
+  image_output: 'images'  # Where to store images (relative to output_dir)
+  extensions:  # Markdown extensions to enable
+    - tables
+    - fenced_code
+    - footnotes
+  code_style: 'github'  # Code block style (github, fenced, etc.)
+  preserve_internal_links: true  # Convert internal links to markdown links
+  flatten_output: false  # Output all markdown files in a single directory

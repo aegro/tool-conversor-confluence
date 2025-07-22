@@ -1,0 +1,52 @@
+# Configuration for two-stage pipeline (cleaning + docling)
+# This preserves images as file references instead of base64 embedding
+
+input_directory: 'input/SA'
+output_directory: 'output/two_stage_final'
+create_docx: false
+log_level: 'INFO'
+log_file: 'two_stage_pipeline.log'
+
+# HTML cleaning settings
+standard_html_classes:
+  table: ['sortable']
+  td: ['selected', 'header']
+  tr: ['odd', 'even']
+  div: ['container', 'row', 'column']
+  span: ['bold', 'italic', 'underline']
+  ul: ['list', 'navigation']
+  li: ['active', 'current']
+  img: ['thumbnail', 'responsive']
+  a: ['active', 'visited', 'external']
+
+image_settings:
+  border_color: '#00c65e'
+  border_width: '1px'
+  allowed_attrs: ['src', 'alt', 'width', 'height', 'title', 'style']
+  embed_as_base64: false  # IMPORTANT: Keep images as file references for docling
+
+# Filename processing settings
+filename_settings:
+  preserve_spaces: true
+  replace_character: '-'
+  sanitize_characters: true
+  url_safe_filenames: true
+
+http_settings:
+  timeout: 30
+  max_retries: 3
+  user_agent: 'HTML Processor Bot/1.0'
+
+document_tree:
+  format: 'table'
+  separator: ';'
+  show_filenames: false
+
+# Markdown conversion settings (not used in two-stage, but kept for compatibility)
+markdown:
+  enabled: false
+  output_dir: 'markdown'
+  image_dir: 'images'
+  image_output: 'images'
+  extensions:
+    - tables
