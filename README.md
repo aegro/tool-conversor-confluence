@@ -37,6 +37,13 @@ If you're looking to migrate from Confluence while maintaining document quality 
 
 ## Features
 
+* **HTML to Markdown Conversion**
+  - Convert Confluence HTML to clean Markdown
+  - Preserve document structure and formatting
+  - Handle images and attachments as separate files
+  - Support for tables, code blocks, and other Markdown elements
+  - Configurable output options
+
 * **HTML Cleaning**
   - Removes Confluence-specific classes, scripts, and elements
   - Standardizes HTML structure and formatting
@@ -121,29 +128,43 @@ This should display the available command-line options and their descriptions.
 
 ## Configuration
 
-The default configuration is stored in `config/default_config.yaml` and includes the following settings:
+Create a `config.yaml` file in your project directory or modify the default configuration in `config/default_config.yaml`. The following settings are available:
+
+### Basic Settings
 
 ```yaml
 # Basic settings
-input_directory: 'input/REL'  # Default input directory for Confluence exports
-output_directory: 'output/'   # Output directory for processed files
-create_docx: false           # Whether to create DOCX files
-log_level: 'INFO'            # Logging level (DEBUG, INFO, WARNING, ERROR)
+input_directory: 'input/REL'  # Input directory containing Confluence HTML exports
+output_directory: 'output/'   # Base output directory
+create_docx: false           # Set to true to enable DOCX conversion
+log_level: 'INFO'            # Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 log_file: 'html_processor.log'  # Log file path
 
+# Markdown Conversion
+markdown:
+  enabled: true              # Enable Markdown output
+  output_dir: 'markdown'     # Subdirectory for markdown output
+  image_dir: 'images'        # Subdirectory for images (relative to markdown file)
+  image_output: 'images'     # Where to store images (relative to output_dir)
+  extensions:                # Markdown extensions to enable
+    - tables
+    - fenced_code
+    - footnotes
+  code_style: 'github'      # Code block style (github, fenced, etc.)
+  preserve_internal_links: true  # Convert internal links to markdown links
+  flatten_output: false     # Output all markdown files in a single directory
+```
+
+### HTML Cleaning Settings
+
+```yaml
 # HTML cleaning settings
 standard_html_classes:
+  # Define standard classes to preserve during cleaning
   table: ['sortable']
   td: ['selected', 'header']
-  tr: ['odd', 'even']
-  div: ['container', 'row', 'column']
-  span: ['bold', 'italic', 'underline']
-  ul: ['list', 'navigation']
-  li: ['active', 'current']
-  img: ['thumbnail', 'responsive']
-  a: ['active', 'visited', 'external']
+  # ... other element classes
 
-# Image handling
 image_settings:
   border_color: '#00c65e'  # Border color for images
   border_width: '1px'      # Border width for images

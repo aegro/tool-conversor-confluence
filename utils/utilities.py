@@ -113,6 +113,16 @@ class ConfigurationManager:
             "img": ["thumbnail", "responsive"],
             "a": ["active", "visited", "external"],
         },
+        "markdown": {
+            "enabled": False,
+            "output_dir": "markdown",
+            "image_dir": "images",
+            "image_output": "images",
+            "extensions": ["tables", "fenced_code", "footnotes"],
+            "code_style": "github",
+            "preserve_internal_links": True,
+            "flatten_output": False
+        }
     }
 
     def __new__(cls):
@@ -190,6 +200,76 @@ class ConfigurationManager:
         """Get HTTP-specific configuration as dataclass."""
         config = self.get_config()
         return HttpConfig(**config.get("http", {}))
+        
+    def get_markdown_config(self) -> Dict:
+        """
+        Get the validated Markdown configuration.
+        
+        Returns:
+            Validated Markdown configuration dictionary
+            
+        Raises:
+            ConfigurationError: If any required configuration is invalid
+        """
+        config = self.get_config()
+        return self.validate_markdown_config(config.get("markdown", {}))
+        
+    def validate_markdown_config(self, config: Optional[Dict] = None) -> Dict:
+        """
+        Validate and normalize Markdown configuration.
+        
+        Args:
+            config: Optional config dictionary to validate. If not provided, uses current config.
+            
+        Returns:
+            Validated Markdown configuration dictionary
+            
+        Raises:
+            ConfigurationError: If any required configuration is invalid
+        """
+        if config is None:
+            config = self.get_config().get("markdown", {})
+            
+        # Create a copy to avoid modifying the original
+        markdown_config = config.copy()
+        
+        # Ensure required fields exist
+        markdown_config.setdefault("enabled", False)
+        markdown_config.setdefault("output_dir", "markdown")
+        markdown_config.setdefault("image_dir", "images")
+        markdown_config.setdefault("image_output", "images")
+        markdown_config.setdefault("extensions", ["tables", "fenced_code", "footnotes"])
+        markdown_config.setdefault("code_style", "github")
+        markdown_config.setdefault("preserve_internal_links", True)
+        markdown_config.setdefault("flatten_output", False)
+        
+        # Validate types
+        if not isinstance(markdown_config["enabled"], bool):
+            raise ConfigurationError("markdown.enabled must be a boolean")
+            
+        if not isinstance(markdown_config["output_dir"], str):
+            raise ConfigurationError("markdown.output_dir must be a string")
+            
+        if not isinstance(markdown_config["image_dir"], str):
+            raise ConfigurationError("markdown.image_dir must be a string")
+            
+        if not isinstance(markdown_config["image_output"], str):
+            raise ConfigurationError("markdown.image_output must be a string")
+            
+        if not isinstance(markdown_config["extensions"], list) or \
+           not all(isinstance(x, str) for x in markdown_config["extensions"]):
+            raise ConfigurationError("markdown.extensions must be a list of strings")
+            
+        if not isinstance(markdown_config["code_style"], str):
+            raise ConfigurationError("markdown.code_style must be a string")
+            
+        if not isinstance(markdown_config["preserve_internal_links"], bool):
+            raise ConfigurationError("markdown.preserve_internal_links must be a boolean")
+            
+        if not isinstance(markdown_config["flatten_output"], bool):
+            raise ConfigurationError("markdown.flatten_output must be a boolean")
+            
+        return markdown_config
 
 
 class LoggingManager:

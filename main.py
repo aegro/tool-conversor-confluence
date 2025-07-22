@@ -116,6 +116,12 @@ class HTMLProcessorCLI:
             help="Convert HTML files to DOCX format",
         )
 
+        parser.add_argument(
+            "--markdown",
+            action="store_true",
+            help="Convert HTML files to Markdown format",
+        )
+
         parser.add_argument("--log-file", type=str, help="Path to log file")
 
         parser.add_argument(
@@ -203,6 +209,12 @@ class HTMLProcessorCLI:
                 config["create_docx"] = True
             if args.log_level:
                 config["log_level"] = args.log_level
+                
+            # Handle markdown configuration
+            if "markdown" not in config:
+                config["markdown"] = {}
+            if args.markdown:
+                config["markdown"]["enabled"] = True
 
             # Add document tree configuration
             if "document_tree" not in config:
