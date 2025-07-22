@@ -57,8 +57,15 @@ If you're looking to migrate from Confluence while maintaining document quality 
 
 * **Format Conversion**
   - Converts cleaned HTML to well-formatted DOCX documents
+  - Markdown output with customizable formatting options
   - Maintains document structure in the output
   - Preserves images and other embedded content
+
+* **Two-Stage Pipeline (Advanced)**
+  - Combines HTML cleaning with Docling conversion
+  - Superior Markdown quality with advanced formatting
+  - Configurable image handling (embedded base64 or file references)
+  - Automated workflow with detailed progress tracking
 
 * **Resource Management**
   - Processes and relocates images and attachments
@@ -280,6 +287,71 @@ python main.py --config my_config.yaml --log-level DEBUG
 ```bash
 python main.py -i /path/to/confluence_exports -o /path/to/output --dry-run
 ```
+
+---
+
+## Two-Stage Pipeline (Advanced Markdown Conversion)
+
+The two-stage pipeline provides superior Markdown conversion by combining HTML cleaning with Docling's advanced conversion capabilities.
+
+### Quick Start
+
+```bash
+# Basic two-stage conversion
+python run_two_stage_conversion.py -i input/confluence_export -o output/markdown_final
+```
+
+### Features
+
+- **High-Quality Markdown**: Docling provides superior HTML to Markdown conversion
+- **Image Preservation**: Images are preserved as file references, not embedded base64
+- **Automated Workflow**: Single command runs both stages automatically
+- **Progress Tracking**: Detailed progress information for both stages
+
+### Configuration
+
+The two-stage pipeline uses a special configuration to preserve images as files:
+
+```yaml
+# config/two_stage_config.yaml
+image_settings:
+  embed_as_base64: false  # Critical for image preservation
+  download_external: false
+  max_width: 800
+```
+
+### Advanced Usage
+
+```bash
+# With custom configuration and verbose output
+python run_two_stage_conversion.py \
+    -i input/confluence_export \
+    -o output/markdown_final \
+    --config config/my_config.yaml \
+    --verbose
+
+# Keep temporary files for debugging
+python run_two_stage_conversion.py \
+    -i input/confluence_export \
+    -o output/debug \
+    --keep-temp \
+    --verbose
+```
+
+### Output Structure
+
+```
+output/
+├── markdown/          # Final Markdown files
+│   └── SpaceName/
+│       └── *.md
+├── html/             # Cleaned HTML (reference)
+│   └── SpaceName/
+│       └── *.html
+└── conversion_report.json
+```
+
+For detailed documentation, see [Two-Stage Pipeline Guide](docs/two-stage-pipeline-guide.md).
 
 ---
 

@@ -1,0 +1,69 @@
+# Configuração para conversão Docling
+# Segunda etapa da pipeline de conversão
+
+# Opções de conversão
+conversion:
+  # Pular arquivos index.html
+  skip_index_files: true
+  
+  # Processar tabelas complexas
+  process_tables: true
+  
+  # Extrair estrutura de documento
+  extract_structure: true
+  
+  # Manter formatação inline (bold, italic, etc)
+  preserve_formatting: true
+
+# Opções de saída Markdown
+markdown:
+  # Estilo de cabeçalhos
+  header_style: "atx"  # Use # para headers
+  
+  # Estilo de listas
+  bullet_char: "-"
+  
+  # Largura máxima de linha (0 = sem limite)
+  line_width: 0
+  
+  # Adicionar índice
+  add_toc: false
+  
+  # Formato de links
+  link_style: "inline"  # [text](url) ao invés de referências
+
+# Processamento de imagens
+images:
+  # Copiar imagens para diretório de saída
+  copy_images: true
+  
+  # Diretório relativo para imagens
+  images_dir: "images"
+  
+  # Converter caminhos absolutos para relativos
+  use_relative_paths: true
+
+# Opções avançadas
+advanced:
+  # Processar fórmulas matemáticas
+  process_math: true
+  
+  # Formato de saída para fórmulas
+  math_format: "latex"
+  
+  # Processar notas de rodapé
+  process_footnotes: true
+  
+  # Detectar e formatar blocos de código
+  detect_code_blocks: true
+  
+  # Linguagens para destacar em blocos de código
+  code_languages:
+    - python
+    - javascript
+    - java
+    - sql
+    - bash
+    - yaml
+    - json
+    - xml

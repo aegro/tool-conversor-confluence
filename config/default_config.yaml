@@ -21,6 +21,7 @@ image_settings:
   border_color: '#00c65e'
   border_width: '1px'
   allowed_attrs: ['src', 'alt', 'width', 'height', 'title', 'style']
+  embed_as_base64: true  # If true, images will be embedded as base64; if false, image paths will be preserved
 
 # Filename processing settings
 filename_settings:

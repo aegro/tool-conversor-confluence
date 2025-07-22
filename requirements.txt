@@ -4,6 +4,9 @@ PyYAML==6.0.2
 requests==2.32.3
 htmldocx==0.0.6
 # Markdown conversion dependencies
-docling>=1.0.0
-pathvalidate>=2.5.0
-markdown>=3.3.0
+docling>=2.0.0
+docling-core>=2.0.0
+docling-parse>=2.0.0
+pathvalidate>=2.5.2
+markdown>=3.5.0
+pyyaml>=6.0
