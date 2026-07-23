@@ -57,8 +57,8 @@ file_processor.HtmlToDocx = DummyHtmlToDocx
 class TestFileProcessor(unittest.TestCase):
     def setUp(self):
         # Create temporary directories for input and output.
-        self.temp_input_dir = Path(tempfile.mkdtemp())
-        self.temp_output_dir = Path(tempfile.mkdtemp())
+        self.temp_input_dir = Path(tempfile.mkdtemp()).resolve()
+        self.temp_output_dir = Path(tempfile.mkdtemp()).resolve()
         self.config = dummy_get_config()  # use the dummy config
 
         # Create a sample HTML content with breadcrumbs
