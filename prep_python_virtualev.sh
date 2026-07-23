@@ -11,8 +11,34 @@
 VENV_NAME="venv"
 # The requirements file.
 REQUIREMENTS_FILE="requirements.txt"
+
+# Dynamic Python Executable Discovery
+find_best_python() {
+  local candidates=(
+    "/opt/homebrew/bin/python3.11"
+    "python3.11"
+    "python3.12"
+    "python3"
+    "python"
+  )
+  for candidate in "${candidates[@]}"; do
+    if [ -f "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    elif command -v "$candidate" >/dev/null 2>&1; then
+      echo "$(command -v "$candidate")"
+      return 0
+    fi
+  done
+  return 1
+}
+
 # The specific Python executable to use for the virtual environment
-PYTHON_EXECUTABLE="/opt/homebrew/bin/python3.11" # Using Python 3.11 for better package compatibility
+if DETECTED_PYTHON=$(find_best_python); then
+  PYTHON_EXECUTABLE="$DETECTED_PYTHON"
+else
+  PYTHON_EXECUTABLE="/opt/homebrew/bin/python3.11" # Fallback to original default
+fi
 
 # --- Script Variables ---
 DELETE_ENV=false # Flag to indicate if --delete-env was passed
