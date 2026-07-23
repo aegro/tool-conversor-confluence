@@ -1,7 +1,7 @@
 beautifulsoup4==4.12.3
 lxml==5.3.0
 PyYAML==6.0.2
-requests==2.32.4
+requests==2.34.2
 htmldocx==0.0.6
 # Markdown conversion dependencies
 docling>=2.0.0
