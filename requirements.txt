@@ -8,5 +8,5 @@ docling>=2.0.0
 docling-core>=2.0.0
 docling-parse>=2.0.0
 pathvalidate>=2.5.2
-markdown>=3.5.0
+markdown>=3.10.2
 pyyaml>=6.0
